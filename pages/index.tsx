@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import React from 'react';
+import React, { useState } from 'react';
 import Chess, {getDefaultLineup} from '../src/react-chess'
 
 interface Props {}
@@ -7,38 +7,30 @@ interface State {
   pieces: string[]
 }
 
-class Demo extends React.PureComponent<Props, State> {
-  constructor(props) {
-    super(props)
+function Demo() {
+    const [state, setState] = useState<State>({pieces: getDefaultLineup()})
 
-    this.state = {pieces: getDefaultLineup()}
-    this.handleMovePiece = this.handleMovePiece.bind(this)
-  }
-
-  handleMovePiece(piece, fromSquare, toSquare) {
-    const newPieces = this.state.pieces
-      .map((curr, index) => {
-        if (piece.index === index) {
-          return `${piece.name}@${toSquare}`
-        } else if (curr.indexOf(toSquare) === 2) {
-          return false // To be removed from the board
-        }
-        return curr
-      })
-      .filter(Boolean)
-
-    this.setState({pieces: newPieces as string[]})
-  }
-
-  render() {
-    const {pieces} = this.state
+    const handleMovePiece = (piece, fromSquare, toSquare) => {
+      const newPieces = state.pieces
+        .map((curr, index) => {
+          if (piece.index === index) {
+            return `${piece.name}@${toSquare}`
+          } else if (curr.indexOf(toSquare) === 2) {
+            return false // To be removed from the board
+          }
+          return curr
+        })
+        .filter(Boolean)
+  
+      setState({pieces: newPieces as string[]})
+    }
+  
     return (
       <div className="demo" style={{width: 600}}>
-        <Chess pieces={pieces} onMovePiece={this.handleMovePiece} />
+        <Chess pieces={state.pieces} onMovePiece={handleMovePiece} />
       </div>
     )
   }
-}
 
 export default function Home() {
   return (
