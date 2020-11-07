@@ -100,7 +100,7 @@ function LabelText({ drawLabels, x, y }) {
     return <>
       <span key="blx" style={xLabelStyles as CSSProperties}>
         a
-      </span>,
+      </span>
       <span key="bly" style={yLabelStyles as CSSProperties}>
         1
       </span>
