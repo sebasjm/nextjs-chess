@@ -209,7 +209,12 @@ function Chess({
       setState({...state, dragFrom: null, targetTile: null, draggingPiece: null })
 
       if (dragFrom.pos !== dragTo.pos) {
-        onMovePiece(draggingPiece, dragFrom.pos, dragTo.pos)
+
+        const landingPieceName = (draggingPiece.name === 'P' && targetTile.y === 0) ? 'Q' :
+                                 (draggingPiece.name === 'p' && targetTile.y === 7) ? 'q' : 
+                                  draggingPiece.name;
+
+        onMovePiece({...draggingPiece, name: landingPieceName}, dragFrom.pos, dragTo.pos)
         return false
       }
 
