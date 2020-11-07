@@ -1,4 +1,4 @@
-import React, { CSSProperties } from 'react';
+import React, { CSSProperties, useState } from 'react';
 import Draggable, { DraggableData, DraggableEvent } from 'react-draggable';
 import defaultLineup from './defaultLineup';
 import pieceComponents from './pieces';
@@ -151,31 +151,22 @@ const DraggablePieces = ({ pieces, handleDragStart, handleDrag, handleDragStop, 
 </>
 
 
-class Chess extends React.Component<Props, State> {
-  static defaultProps = {
-    allowMoves: true,
-    highlightTarget: true,
-    drawLabels: true,
-    onMovePiece: noop,
-    onDragStart: noop,
-    lightSquareColor: '#f0d9b5',
-    darkSquareColor: '#b58863',
-    pieces: getDefaultLineup()
-  };
+function Chess({
+  allowMoves = true,
+  highlightTarget = true,
+  drawLabels = true,
+  onMovePiece = noop,
+  onDragStart = noop,
+  lightSquareColor = '#f0d9b5',
+  darkSquareColor = '#b58863',
+  pieces = getDefaultLineup()
+}: Props) {
 
-  constructor(p) {
-    super(p)
-
-    this.state = {
+    const [state, setState] = useState<State>({
       tileSize: size / 8,
       boardSize: size
-    }
-  }
-
-  render() {
-    const { props, state } = this
+    })
     const { targetTile, draggingPiece, boardSize, tileSize, dragFrom } = state
-    const { lightSquareColor, darkSquareColor, drawLabels, highlightTarget, allowMoves, pieces, onDragStart, onMovePiece } = props
 
     const handleDrag = (evt: DraggableEvent, drag: DraggableData): any => {
       if (!highlightTarget) {
@@ -189,7 +180,7 @@ class Chess extends React.Component<Props, State> {
       })
 
       if (!targetTile || targetTile.x !== x || targetTile.y !== y) {
-        this.setState({ targetTile: { x, y } })
+        setState({...state, targetTile: { x, y } })
       }
     }
 
@@ -207,7 +198,7 @@ class Chess extends React.Component<Props, State> {
         return false
       }
 
-      this.setState({ dragFrom, draggingPiece })
+      setState({...state, dragFrom, draggingPiece })
       return evt
     }
 
@@ -215,7 +206,7 @@ class Chess extends React.Component<Props, State> {
       const node = drag.node
       const dragTo = coordsToPosition({ tileSize, x: node.offsetLeft + drag.x, y: node.offsetTop + drag.y })
 
-      this.setState({ dragFrom: null, targetTile: null, draggingPiece: null })
+      setState({...state, dragFrom: null, targetTile: null, draggingPiece: null })
 
       if (dragFrom.pos !== dragTo.pos) {
         onMovePiece(draggingPiece, dragFrom.pos, dragTo.pos)
@@ -232,7 +223,6 @@ class Chess extends React.Component<Props, State> {
       </div>
     )
   }
-}
 
 
 export default Chess
