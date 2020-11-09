@@ -29,10 +29,11 @@ interface Props {
   lightSquareColor?: string;
   darkSquareColor?: string;
   onMovePiece: (d: Dragging, from: string, to: string) => void;
-  onDragStart?: (d: Dragging, from: string) => boolean;
+  onDragStart?: (d: Dragging) => boolean;
   pieces?: string[];
+  whiteTurn?: boolean;
 }
-interface Dragging {
+export interface Dragging {
   notation: string;
   name: string;
   index: number;
@@ -187,6 +188,7 @@ function Chess({
     drawLabels = true,
     onMovePiece = noop,
     onDragStart = noop,
+    whiteTurn = true,
     lightSquareColor = '#f0d9b5',
     darkSquareColor = '#b58863',
     pieces = getDefaultLineup()
@@ -221,7 +223,7 @@ function Chess({
       const node = drag.node
       const dragFrom = coordsToPosition({ tileSize, x: node.offsetLeft, y: node.offsetTop })
       const draggingPiece = findPieceAtPosition({ pieces, pos: dragFrom.pos })
-      if (onDragStart(draggingPiece, dragFrom.pos) === false) {
+      if (onDragStart(draggingPiece) === false) {
         return false
       }
 

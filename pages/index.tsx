@@ -1,12 +1,13 @@
 import Head from 'next/head'
 import React, { useEffect, useReducer, useState } from 'react';
-import Chess, { getDefaultLineup } from '../src/react-chess'
+import Chess, { Dragging, getDefaultLineup } from '../src/react-chess'
 import * as Ably from 'ably'
 import axios from 'axios';
 
 interface Props { }
 interface State {
-  pieces: string[]
+  pieces: string[];
+  whiteTurn: boolean;
 }
 interface MovePiece {
   type: 'move';
@@ -36,7 +37,7 @@ const updateState = (state: State, action: Action):State => {
           return curr
         })
         .filter(Boolean)
-      return { pieces: newPieces };
+      return { pieces: newPieces, whiteTurn: !state.whiteTurn };
     default:
       throw new Error();
   }
@@ -44,7 +45,16 @@ const updateState = (state: State, action: Action):State => {
 
 const resetState = ():State => ({
   pieces: getDefaultLineup(),
+  whiteTurn: true
 })
+
+const isWhite = (string) => /^[A-Z]*$/.test(string.charAt(0))
+
+const handleDrag = (state:State) => (d: Dragging): boolean => {
+  if (!state.whiteTurn && isWhite(d.notation)) return false
+  if (state.whiteTurn && !isWhite(d.notation)) return false
+  return true;
+}
 
 function Demo() {
   const [state, dispatch] = useReducer(updateState, undefined, resetState)
@@ -55,7 +65,7 @@ function Demo() {
 
   return (
     <div className="demo" style={{ width: 600 }}>
-      <Chess pieces={state.pieces} onMovePiece={handleMovePiece} />
+      <Chess pieces={state.pieces} onDragStart={handleDrag(state)} onMovePiece={handleMovePiece} />
     </div>
   )
 }
