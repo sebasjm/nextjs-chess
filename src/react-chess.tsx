@@ -1,4 +1,4 @@
-import React, { CSSProperties, useState } from 'react';
+import React, { CSSProperties, useReducer, useState } from 'react';
 import Draggable, { DraggableData, DraggableEvent } from 'react-draggable';
 import defaultLineup from './defaultLineup';
 import pieceComponents from './pieces';
@@ -150,22 +150,49 @@ const DraggablePieces = ({ pieces, handleDragStart, handleDrag, handleDragStop, 
   })}
 </>
 
+interface MovingToAction {
+  type: 'movingTo';
+  data: { x: number, y: number }
+}
+interface PickAction {
+  type: 'pick';
+  data: { dragFrom: { x: number, y: number, pos: string }, draggingPiece: Dragging }
+}
+interface DropAction {
+  type: 'drop';
+}
+type Action = MovingToAction | PickAction | DropAction;
+
+const updateState = (state: State, action: Action):State => {
+  switch (action.type) {
+    case 'movingTo':
+      return {...state, targetTile: action.data };
+    case 'pick':
+      return {...state, ...action.data };
+    case 'drop':
+      return {...state, dragFrom: null, targetTile: null, draggingPiece: null };
+    default:
+      throw new Error();
+  }
+}
+
+const resetState = (size: number):State => ({
+  tileSize: size / 8,
+  boardSize: size
+})
 
 function Chess({
-  allowMoves = true,
-  highlightTarget = true,
-  drawLabels = true,
-  onMovePiece = noop,
-  onDragStart = noop,
-  lightSquareColor = '#f0d9b5',
-  darkSquareColor = '#b58863',
-  pieces = getDefaultLineup()
-}: Props) {
+    allowMoves = true,
+    highlightTarget = true,
+    drawLabels = true,
+    onMovePiece = noop,
+    onDragStart = noop,
+    lightSquareColor = '#f0d9b5',
+    darkSquareColor = '#b58863',
+    pieces = getDefaultLineup()
+  }: Props) {
 
-    const [state, setState] = useState<State>({
-      tileSize: size / 8,
-      boardSize: size
-    })
+    const [state, dispatch] = useReducer(updateState, size, resetState)
     const { targetTile, draggingPiece, boardSize, tileSize, dragFrom } = state
 
     const handleDrag = (evt: DraggableEvent, drag: DraggableData): any => {
@@ -180,7 +207,7 @@ function Chess({
       })
 
       if (!targetTile || targetTile.x !== x || targetTile.y !== y) {
-        setState({...state, targetTile: { x, y } })
+        dispatch({type: 'movingTo', data: {x ,y} })
       }
     }
 
@@ -198,7 +225,7 @@ function Chess({
         return false
       }
 
-      setState({...state, dragFrom, draggingPiece })
+      dispatch({type: 'pick', data: {dragFrom , draggingPiece} })
       return evt
     }
 
@@ -206,7 +233,7 @@ function Chess({
       const node = drag.node
       const dragTo = coordsToPosition({ tileSize, x: node.offsetLeft + drag.x, y: node.offsetTop + drag.y })
 
-      setState({...state, dragFrom: null, targetTile: null, draggingPiece: null })
+      dispatch({type:'drop'})
 
       if (dragFrom.pos !== dragTo.pos) {
 
