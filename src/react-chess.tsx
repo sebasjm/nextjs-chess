@@ -3,6 +3,7 @@ import Draggable, { DraggableData, DraggableEvent } from 'react-draggable';
 import defaultLineup from './defaultLineup';
 import pieceComponents from './pieces';
 import decode from './decode';
+import { swap, movesOld as moves } from './logic'
 
 export const getDefaultLineup = () => defaultLineup.slice()
 const noop = () => true;
@@ -56,6 +57,7 @@ interface State {
     y: number;
     pos: string;
   }
+  marks?: {x:number, y:number}[],
 }
 
 const size = 600
@@ -112,20 +114,21 @@ function LabelText({ drawLabels, x, y }) {
   return <span style={(isLeftColumn ? yLabelStyles : xLabelStyles) as CSSProperties}>{label}</span>
 }
 
-const cellStyles = ({ isTarget, lightSquareColor, darkSquareColor, x, y }) => ({
+const cellStyles = ({ isTarget, lightSquareColor, darkSquareColor, x, y, isValid }) => ({
   ...squareStyles,
   background: getSquareColor({ lightSquareColor, darkSquareColor, x, y }),
-  boxShadow: isTarget ? 'inset 0px 0px 0px 0.4vmin yellow' : undefined,
+  boxShadow: isTarget ? 'inset 0px 0px 0px 0.4vmin yellow' : (isValid ? 'inset 0px 0px 0px 0.4vmin green' : undefined),
 })
 
-const Tiles = ({ targetTile, lightSquareColor, darkSquareColor, drawLabels }) => <>
+const Tiles = ({ targetTile, lightSquareColor, darkSquareColor, drawLabels, marks }) => <>
   {Array.from({ length: 64 }, (v, i) => {
     const x = Math.floor(i % 8);
     const y = Math.floor(i / 8);
 
     const styles = cellStyles({
       isTarget: targetTile && targetTile.x === x && targetTile.y === y,
-      lightSquareColor, darkSquareColor, x, y
+      lightSquareColor, darkSquareColor, x, y,
+      isValid: (marks as {x:number,y:number}[] || []).findIndex(v => v.x ===x && v.y === y) !== -1
     });
 
     return <div key={`rect-${x}-${y}`} style={styles as CSSProperties}>
