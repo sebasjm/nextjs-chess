@@ -1,8 +1,8 @@
 import Head from 'next/head'
 import React, { useEffect, useReducer, useState } from 'react';
 import Chess, { Dragging, getDefaultLineup } from '../src/react-chess'
-import * as Ably from 'ably'
-import axios from 'axios';
+// import * as Ably from 'ably'
+// import axios from 'axios';
 import { Board, moves, Piece, pieceTypeByName, swap } from '../src/logic';
 
 interface Props { }

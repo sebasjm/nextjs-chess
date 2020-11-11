@@ -1,5 +1,4 @@
-import React, { CSSProperties, useReducer, useState } from 'react';
-import Draggable, { DraggableData, DraggableEvent } from 'react-draggable';
+import React, { CSSProperties, MouseEventHandler, SyntheticEvent, useReducer, useRef, useState } from 'react';
 import defaultLineup from './defaultLineup';
 import pieceComponents from './pieces';
 import decode from './decode';
@@ -25,7 +24,6 @@ const xLabelStyles = Object.assign({ bottom: '5%', right: '5%' }, labelStyles)
 
 interface Props {
   allowMoves?: boolean;
-  highlightTarget?: boolean;
   drawLabels?: boolean;
   lightSquareColor?: string;
   darkSquareColor?: string;
@@ -77,8 +75,8 @@ const findPieceAtPosition = ({ pieces, pos }) => {
 const toPosition = ({ x, y }) => ({ x, y, pos: `${String.fromCharCode(decode.charCodeOffset + x)}${8 - y}` })
 
 const coordsToPosition = ({ tileSize, x, y }) => toPosition({
-  x: Math.round(x / tileSize),
-  y: Math.round(y / tileSize),
+  x: Math.floor(x / tileSize),
+  y: Math.floor(y / tileSize),
 })
 
 
@@ -138,20 +136,13 @@ const Tiles = ({ targetTile, lightSquareColor, darkSquareColor, drawLabels, mark
   })}
 </>
 
-const DraggablePieces = ({ pieces, handleDragStart, handleDrag, handleDragStop, draggingPiece }) => <>
+const DraggablePieces = ({ pieces }) => <>
   {pieces.map((decl, i) => {
-    const isMoving = draggingPiece && i === draggingPiece.index
     const { x, y, piece } = decode.fromPieceDecl(decl)
     const Piece = pieceComponents[piece]
-    return <Draggable
-      bounds="parent"
-      defaultPosition={{ x: 0, y: 0 }}
-      onStart={handleDragStart}
-      onDrag={handleDrag}
-      onStop={handleDragStop}
-      key={`${piece}-${x}-${y}`}>
-      <Piece isMoving={isMoving} x={x} y={y} />
-    </Draggable>
+    return <div key={`${piece}-${x}-${y}`}>
+      <Piece x={x} y={y} />  
+    </div>
   })}
 </>
 
@@ -168,7 +159,8 @@ interface DropAction {
 }
 type Action = MovingToAction | PickAction | DropAction;
 
-const translatePieces = (ps:string[], whiteTurn: boolean, exclude: string): Piece[] => ps.map( name => name === exclude ? null : ({
+const translatePieces = (ps:string[], whiteTurn: boolean, exclude: string): Piece[] => ps
+.map( name => name === exclude ? null : ({
   x: name.codePointAt(2) - 'a'.codePointAt(0),
   y: (y => whiteTurn ? y : 7-y)(name.codePointAt(3) - '1'.codePointAt(0)),
   foe: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()), 
@@ -205,7 +197,6 @@ const resetState = (size: number):State => ({
 
 function Chess({
     allowMoves = true,
-    highlightTarget = true,
     drawLabels = true,
     onMovePiece = noop,
     onDragStart = noop,
@@ -216,69 +207,48 @@ function Chess({
     pieces = getDefaultLineup()
   }: Props) {
 
+    const boardEl = useRef(null)
     const [state, dispatch] = useReducer(updateState, size, resetState)
-    const { targetTile, draggingPiece, boardSize, tileSize, dragFrom } = state
+    const { targetTile, boardSize, tileSize, dragFrom } = state
 
-    const handleDrag = (evt: DraggableEvent, drag: DraggableData): any => {
-      if (!highlightTarget) {
-        return
-      }
-
-      const { x, y } = coordsToPosition({
-        tileSize,
-        x: drag.node.offsetLeft + drag.x,
-        y: drag.node.offsetTop + drag.y
-      })
-
-      if (!targetTile || targetTile.x !== x || targetTile.y !== y) {
-        dispatch({type: 'movingTo', data: {x ,y} })
-      }
-    }
-
-    const handleDragStart = (evt: DraggableEvent, drag: DraggableData): any => {
-      evt.preventDefault()
-
+    const handlePick: MouseEventHandler = (ev) => {
       if (!allowMoves) {
         return false
       }
 
-      const node = drag.node
-      const dragFrom = coordsToPosition({ tileSize, x: node.offsetLeft, y: node.offsetTop })
+      const bbox = boardEl.current.getBoundingClientRect();
+      const x = ev.clientX - bbox.left;
+      const y = ev.clientY - bbox.top;
+      
+      const dragFrom = coordsToPosition({ tileSize, x,y })
+
       const draggingPiece = findPieceAtPosition({ pieces, pos: dragFrom.pos })
-      if (onDragStart(draggingPiece) === false) {
-        return false
+      if (draggingPiece && onDragStart(draggingPiece)) {
+        dispatch({type: 'pick', data: {dragFrom , draggingPiece, whiteTurn, pieces} })
+        return true
       }
 
-      dispatch({type: 'pick', data: {dragFrom , draggingPiece, whiteTurn, pieces} })
-      return evt
-    }
-
-    const handleDragStop = (evt: DraggableEvent, drag: DraggableData): any => {
-      if (!!evt['nativeEvent']) return // FIXME: prevent doble handle drop
-
-      const node = drag.node
-      const dragTo = coordsToPosition({ tileSize, x: node.offsetLeft + drag.x, y: node.offsetTop + drag.y })
-
-      dispatch({type:'drop'})
-
-      if (dragFrom.pos !== dragTo.pos) {
-
-        // check if pawn promotion
-        const landingPieceName = (draggingPiece.name === 'P' && targetTile.y === 0) ? 'Q' :
-                                 (draggingPiece.name === 'p' && targetTile.y === 7) ? 'q' : 
+      const mark = state.marks?.find( m=> m.x === dragFrom.x && m.y === dragFrom.y )
+      if (mark) {
+        dispatch({type:'drop'})
+        const {draggingPiece} = state
+          // check if pawn promotion
+        const landingPieceName = (draggingPiece.name === 'P' && dragFrom.y === 0) ? 'Q' :
+                                 (draggingPiece.name === 'p' && dragFrom.y === 7) ? 'q' : 
                                   draggingPiece.name;
 
-        onMovePiece({...draggingPiece, name: landingPieceName}, dragFrom.pos, dragTo.pos)
-        return false
+        onMovePiece({...draggingPiece, name: landingPieceName}, state.dragFrom.pos, dragFrom.pos)
+        return true
       }
+
 
       return true
     }
 
     return (
-      <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: boardSize }}>
+      <div ref={boardEl} style={{ position: 'relative', overflow: 'hidden', width: '100%', height: boardSize }} onClick={handlePick}>
         <Tiles marks={state.marks} targetTile={targetTile} darkSquareColor={darkSquareColor} lightSquareColor={lightSquareColor} drawLabels={drawLabels} />
-        <DraggablePieces pieces={pieces} draggingPiece={draggingPiece} handleDrag={handleDrag} handleDragStart={handleDragStart} handleDragStop={handleDragStop} />
+        <DraggablePieces pieces={pieces} />
       </div>
     )
   }
