@@ -33,6 +33,7 @@ interface Props {
   onDragStart?: (d: Dragging) => boolean;
   pieces?: string[];
   whiteTurn?: boolean;
+  passant?: string;
 }
 export interface Dragging {
   notation: string;
@@ -160,7 +161,7 @@ interface MovingToAction {
 }
 interface PickAction {
   type: 'pick';
-  data: { dragFrom: { x: number, y: number, pos: string }, draggingPiece: Dragging }
+  data: { dragFrom: { x: number, y: number, pos: string }, draggingPiece: Dragging, whiteTurn: boolean }
 }
 interface DropAction {
   type: 'drop';
@@ -172,9 +173,10 @@ const updateState = (state: State, action: Action):State => {
     case 'movingTo':
       return {...state, targetTile: action.data };
     case 'pick':
-      return {...state, ...action.data };
+      const validMoves = moves[action.data.draggingPiece.name.toLowerCase()](swap(action.data.dragFrom, !action.data.whiteTurn)).map(x => swap(x,!action.data.whiteTurn))
+      return {...state, ...action.data, marks: validMoves }
     case 'drop':
-      return {...state, dragFrom: null, targetTile: null, draggingPiece: null };
+      return {...state, dragFrom: null, targetTile: null, draggingPiece: null, marks: null };
     default:
       throw new Error();
   }
@@ -192,6 +194,7 @@ function Chess({
     onMovePiece = noop,
     onDragStart = noop,
     whiteTurn = true,
+    passant = null,
     lightSquareColor = '#f0d9b5',
     darkSquareColor = '#b58863',
     pieces = getDefaultLineup()
@@ -230,7 +233,7 @@ function Chess({
         return false
       }
 
-      dispatch({type: 'pick', data: {dragFrom , draggingPiece} })
+      dispatch({type: 'pick', data: {dragFrom , draggingPiece, whiteTurn} })
       return evt
     }
 
@@ -255,7 +258,7 @@ function Chess({
 
     return (
       <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: boardSize }}>
-        <Tiles targetTile={targetTile} darkSquareColor={darkSquareColor} lightSquareColor={lightSquareColor} drawLabels={drawLabels} />
+        <Tiles marks={state.marks} targetTile={targetTile} darkSquareColor={darkSquareColor} lightSquareColor={lightSquareColor} drawLabels={drawLabels} />
         <DraggablePieces pieces={pieces} draggingPiece={draggingPiece} handleDrag={handleDrag} handleDragStart={handleDragStart} handleDragStop={handleDragStop} />
       </div>
     )

@@ -8,14 +8,16 @@ interface Props { }
 interface State {
   pieces: string[];
   whiteTurn: boolean;
+  passant?: string;
 }
 interface MovePiece {
   type: 'move';
   data: {
     piece: {
       name: string, index: number;
-    },
-    to: string
+    };
+    from: string;
+    to: string;
   };
 }
 
@@ -60,12 +62,17 @@ function Demo() {
   const [state, dispatch] = useReducer(updateState, undefined, resetState)
 
   const handleMovePiece = (piece, from, to) => {
-    dispatch({type: "move", data: {piece, to}})
+    dispatch({type: "move", data: {piece, from, to}})
   }
 
   return (
     <div className="demo" style={{ width: 600 }}>
-      <Chess pieces={state.pieces} onDragStart={handleDrag(state)} onMovePiece={handleMovePiece} />
+        <div>juegan {state.whiteTurn ? 'blancas' : 'negras'}</div>
+
+      <Chess  
+        whiteTurn={state.whiteTurn} pieces={state.pieces} passant={state.passant}
+        onDragStart={handleDrag(state)} 
+        onMovePiece={handleMovePiece} />
     </div>
   )
 }
@@ -80,7 +87,6 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <title>ajedrez</title>
       </Head>
-
       <Demo />
       {/* <button onClick={async () => {
         await axios.post('http://localhost:3001/login', { user: 'seba', password: 'sebasjm' }, { withCredentials: true })
