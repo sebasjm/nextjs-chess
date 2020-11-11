@@ -3,7 +3,7 @@ import Draggable, { DraggableData, DraggableEvent } from 'react-draggable';
 import defaultLineup from './defaultLineup';
 import pieceComponents from './pieces';
 import decode from './decode';
-import { swap, movesOld as moves } from './logic'
+import { swap, moves, Board, Piece, pieceTypeByName } from './logic'
 
 export const getDefaultLineup = () => defaultLineup.slice()
 const noop = () => true;
@@ -33,7 +33,7 @@ interface Props {
   onDragStart?: (d: Dragging) => boolean;
   pieces?: string[];
   whiteTurn?: boolean;
-  passant?: string;
+  passant?: number;
 }
 export interface Dragging {
   notation: string;
@@ -161,19 +161,35 @@ interface MovingToAction {
 }
 interface PickAction {
   type: 'pick';
-  data: { dragFrom: { x: number, y: number, pos: string }, draggingPiece: Dragging, whiteTurn: boolean }
+  data: { dragFrom: { x: number, y: number, pos: string }, draggingPiece: Dragging, whiteTurn: boolean, pieces: string[] }
 }
 interface DropAction {
   type: 'drop';
 }
 type Action = MovingToAction | PickAction | DropAction;
 
+const translatePieces = (ps:string[], whiteTurn: boolean, exclude: string): Piece[] => ps.map( name => name === exclude ? null : ({
+  x: name.codePointAt(2) - 'a'.codePointAt(0),
+  y: (y => whiteTurn ? y : 7-y)(name.codePointAt(3) - '1'.codePointAt(0)),
+  foe: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()), 
+  type: pieceTypeByName(name.charAt(0))
+})).filter(Boolean)
+
 const updateState = (state: State, action: Action):State => {
   switch (action.type) {
     case 'movingTo':
       return {...state, targetTile: action.data };
     case 'pick':
-      const validMoves = moves[action.data.draggingPiece.name.toLowerCase()](swap(action.data.dragFrom, !action.data.whiteTurn)).map(x => swap(x,!action.data.whiteTurn))
+      const board:Board = {
+        pieces: translatePieces(action.data.pieces, action.data.whiteTurn, action.data.draggingPiece.notation),
+      }
+
+      const pieceStrategy = moves[action.data.draggingPiece.name.toLowerCase()]
+      const pos = swap(action.data.dragFrom, !action.data.whiteTurn) // normal position
+      const validMoves = pieceStrategy(pos)
+        .map( m => m(board)).filter(Boolean)
+        .map(x => swap(x,!action.data.whiteTurn)) //translate back position
+
       return {...state, ...action.data, marks: validMoves }
     case 'drop':
       return {...state, dragFrom: null, targetTile: null, draggingPiece: null, marks: null };
@@ -233,11 +249,13 @@ function Chess({
         return false
       }
 
-      dispatch({type: 'pick', data: {dragFrom , draggingPiece, whiteTurn} })
+      dispatch({type: 'pick', data: {dragFrom , draggingPiece, whiteTurn, pieces} })
       return evt
     }
 
     const handleDragStop = (evt: DraggableEvent, drag: DraggableData): any => {
+      if (!!evt['nativeEvent']) return // FIXME: prevent doble handle drop
+
       const node = drag.node
       const dragTo = coordsToPosition({ tileSize, x: node.offsetLeft + drag.x, y: node.offsetTop + drag.y })
 
@@ -245,6 +263,7 @@ function Chess({
 
       if (dragFrom.pos !== dragTo.pos) {
 
+        // check if pawn promotion
         const landingPieceName = (draggingPiece.name === 'P' && targetTile.y === 0) ? 'Q' :
                                  (draggingPiece.name === 'p' && targetTile.y === 7) ? 'q' : 
                                   draggingPiece.name;

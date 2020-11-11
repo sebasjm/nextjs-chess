@@ -55,6 +55,11 @@ const validIfEmpty = (pos:Pos) => (board: Board) => {
   return !piece ? pos : null
 }
 
+const validIfEmptyAndPassant = (pos:Pos) => (board: Board) => {
+  const piece = board.pieces.find(p => p.x === pos.x && p.y === pos.y)
+  return !piece && pos.y === 3 ? pos : null
+}
+
 // for the pawn
 const validIfPassant = (pos:Pos) => (board: Board) => {
   const piece = board.pieces.find(p => p.x === pos.x && p.y === pos.y -1)
@@ -64,12 +69,12 @@ const validIfPassant = (pos:Pos) => (board: Board) => {
 }
 
 const validIfKingSafe = (pos:Pos) => (board: Board) => {
-  const piece = board.pieces.find(p => p.x === pos.x && p.y === pos.y)
+  //TODO: not implemented yet
   return pos
 }
 
 const validIfInside = (pos:Pos) => (board: Board) => {
-  return pos.x < 7 && pos.x > 0 && pos.y < 7 && pos.y > 0 ? pos : null
+  return pos.x <= 7 && pos.x >= 0 && pos.y <= 7 && pos.y >= 0 ? pos : null
 }
 
 const validIfNoFriend = (pos:Pos) => (board: Board) => {
@@ -81,6 +86,18 @@ const validIfNoFriend = (pos:Pos) => (board: Board) => {
 export enum PieceType {
   Pawn, Knigth, Rook, Bishop, Queen, King
 }
+export const pieceTypeByName = (str:string) => {
+  switch (str.toLowerCase()) {
+    case 'b': return PieceType.Bishop;
+    case 'k': return PieceType.King;
+    case 'n': return PieceType.Knigth;
+    case 'r': return PieceType.Rook;
+    case 'q': return PieceType.Queen;
+    case 'p': return PieceType.Pawn;
+    default: null
+  }
+}
+
 
 interface Pos {
   x: number,
@@ -98,12 +115,12 @@ export interface Board {
   castlePosible?: boolean; //is still posible to castle?
 }
 
-export const movesNew = {
+export const moves: {[k:string]:(p:Pos)=>D[]} = {
   p: ({x,y}) => [
     validIfEmpty({x,y:y+1}),
     validOr(validIfPassant, validIfEnemy)({x:x+1,y:y+1}),
-    validOr(validIfPassant, validIfEnemy)({x:x+1,y:y+1}),
-    validAll(validIfEmpty({x,y:y+1}), validIfEmpty({x,y:y+2})),
+    validOr(validIfPassant, validIfEnemy)({x:x-1,y:y+1}),
+    validAll(validIfEmpty({x,y:y+1}), validIfEmptyAndPassant({x,y:y+2})),
   ]
    .map(x => validAnd(x,validIfNoFriend))
    .map(x => validAnd(x,validIfKingSafe))
@@ -169,61 +186,3 @@ export const movesNew = {
 
 export const swap = ({x,y}:{x:number,y:number}, swap: boolean) => ({x,y: swap ? y : 7-y})
 
-
-
-export const movesOld = {
-  p: ({x,y}) => [
-    y < 7  ? ({x,y:y+1}) : null,
-    x < 7 && y < 7 ? ({x:x+1,y:y+1}) : null,
-    x > 0 && y < 7 ? ({x:x-1,y:y+1}) : null,
-    y == 1 ? ({x,y:y+2}) : null,
-  ].filter(Boolean),
-  n: ({x,y}) => [
-    x < 7 && y < 6 ? ({x:x+1,y:y+2}) : null,
-    x < 7 && y > 1 ? ({x:x+1,y:y-2}) : null,
-    x > 0 && y < 6 ? ({x:x-1,y:y+2}) : null,
-    x > 0 && y > 1 ? ({x:x-1,y:y-2}) : null,
-    x < 7 && y < 6 ? ({x:x+2,y:y+1}) : null,
-    x < 7 && y > 1 ? ({x:x+2,y:y-1}) : null,
-    x > 0 && y < 6 ? ({x:x-2,y:y+1}) : null,
-    x > 0 && y > 1 ? ({x:x-2,y:y-1}) : null,
-  ].filter(Boolean),
-  r: ({x,y}) => {
-    const xs = Array.from({ length: 7 }, (v, i) => ({x,y:(y+i+1)%8}))
-    const ys = Array.from({ length: 7 }, (v, i) => ({y,x:(x+i+1)%8}))
-    return [...ys,...xs]
-  },
-  b: ({x,y}) => {
-    // const st = Math.min(x  ,  y)
-    // const dt = Math.min(7-x,7-y)
-    // const d1 = Array.from({ length: dt + st }, (v, i) => ({
-    //   x:(x-st+(st+1+i)%(st+dt+1)),
-    //   y:(y-st+(st+1+i)%(st+dt+1))
-    // }))
-    const d1 = Array.from({ length: Math.min(x  ,  y) }, (v, i) => ({x:(x-i)-1,y:(y-i)-1}))
-    const d4 = Array.from({ length: Math.min(7-x,7-y) }, (v, i) => ({x:(x+i)+1,y:(y+i)+1}))
-
-    const d2 = Array.from({ length: Math.min(7-x,  y) }, (v, i) => ({x:(x+i)+1,y:(y-i)-1}))
-    const d3 = Array.from({ length: Math.min(x  ,7-y) }, (v, i) => ({x:(x-i)-1,y:(y+i)+1}))
-    return [...d1,...d2,...d3,...d4]
-  },
-  q: ({x,y}) => {
-    const xs = Array.from({ length: 7 }, (v, i) => ({x,y:(y+i+1)%8}))
-    const ys = Array.from({ length: 7 }, (v, i) => ({y,x:(x+i+1)%8}))
-    const d1 = Array.from({ length: Math.min(7-x,7-y) }, (v, i) => ({x:(x+i)+1,y:(y+i)+1}))
-    const d2 = Array.from({ length: Math.min(7-x,  y) }, (v, i) => ({x:(x+i)+1,y:(y-i)-1}))
-    const d3 = Array.from({ length: Math.min(x  ,7-y) }, (v, i) => ({x:(x-i)-1,y:(y+i)+1}))
-    const d4 = Array.from({ length: Math.min(x  ,  y) }, (v, i) => ({x:(x-i)-1,y:(y-i)-1}))
-    return [...ys,...xs,...d1,...d2,...d3,...d4]
-  },
-  k: ({x,y}) => [
-    x < 7 && y < 7 ? ({x:x+1,y:y+1}) : null,
-    x < 7          ? ({x:x+1,y    }) : null,
-    x < 7 && y > 0 ? ({x:x+1,y:y-1}) : null,
-             y > 0 ? ({x    ,y:y-1}) : null,
-    x > 0 && y > 0 ? ({x:x-1,y:y-1}) : null,
-    x > 0          ? ({x:x-1,y    }) : null,
-    x > 0 && y < 7 ? ({x:x-1,y:y+1}) : null,
-             y < 7 ? ({x    ,y:y+1}) : null,
-  ].filter(Boolean),
-}
