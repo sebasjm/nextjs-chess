@@ -260,7 +260,7 @@ describe('chess moves', function() {
       ])
     });
 
-    it.skip('should not eat guarded enemy by rook', function() {
+    it('should not eat guarded enemy by rook', function() {
       const board:Board = {
         pieces: ['p:24','r:14'].map(buildPiece)
       }
@@ -292,7 +292,7 @@ describe('chess moves', function() {
       ])
     });
 
-    it.skip('should be blocked by friends and exclude position', function() {
+    it('should be blocked by friends and exclude position', function() {
       const board:Board = {
         pieces: ['P:46','P:54'].map(buildPiece)
       }
@@ -307,7 +307,7 @@ describe('chess moves', function() {
       ])
     });
 
-    it.skip('should be blocked by enemies and include position', function() {
+    it('should be blocked by enemies and include position', function() {
       const board:Board = {
         pieces: ['p:46','p:54'].map(buildPiece)
       }
@@ -338,7 +338,7 @@ describe('chess moves', function() {
       const ms = rook({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
-        {x:1, y:4}
+        {x:1, y:4},{x:2, y:4},{x:3, y:4},
       ])
     });
   });
@@ -373,7 +373,7 @@ describe('chess moves', function() {
         ])
     });
 
-    it.skip('should be blocked by friends and exclude position', function() {
+    it('should be blocked by friends and exclude position', function() {
       const board:Board = {
         pieces: ['P:33','P:26'].map(buildPiece)
       }
@@ -381,7 +381,7 @@ describe('chess moves', function() {
 
       expect(ms).to.have.deep.members([
         
-        {x:0,y:0},{x:5,y:5},{x:6,y:6},
+                  {x:5,y:5},{x:6,y:6},
         {x:7,y:7},
   
                             {x:3,y:5},
@@ -389,15 +389,15 @@ describe('chess moves', function() {
         ])
     });
 
-    it.skip('should be blocked by enemies and include position', function() {
+    it('should be blocked by enemies and include position', function() {
       const board:Board = {
-        pieces: ['P:33','P:26'].map(buildPiece)
+        pieces: ['p:33','p:26'].map(buildPiece)
       }
       const ms = bishop({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
                             {x:3,y:3},
-        {x:0,y:0},{x:5,y:5},{x:6,y:6},
+                  {x:5,y:5},{x:6,y:6},
         {x:7,y:7},
   
                   {x:2,y:6},{x:3,y:5},
@@ -421,7 +421,7 @@ describe('chess moves', function() {
       const ms = bishop({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
-        {x:0, y:0}
+        {x:0, y:0},{x:1, y:1},{x:2, y:2},{x:3, y:3}
       ])
     });
   });
@@ -452,7 +452,7 @@ describe('chess moves', function() {
       expect(q_ms).to.have.deep.members([...b_ms, ...r_ms])
     });
 
-    it.skip('should be blocked by friends and exclude position', function() {
+    it('should be blocked by friends and exclude position', function() {
       const board:Board = {
         pieces: ['P:33','P:26'].map(buildPiece)
       }
@@ -464,9 +464,9 @@ describe('chess moves', function() {
       expect(q_ms).to.have.deep.members([...b_ms, ...r_ms])
     });
 
-    it.skip('should be blocked by enemies and include position', function() {
+    it('should be blocked by enemies and include position', function() {
       const board:Board = {
-        pieces: ['P:33','P:26'].map(buildPiece)
+        pieces: ['p:33','p:26'].map(buildPiece)
       }
       const ms = queen({x:4,y:4},board)
 
@@ -479,4 +479,18 @@ describe('chess moves', function() {
     });
 
   });
+  
 });
+
+describe('regression test', function() {
+
+  it.skip('should not block pieces when king is covered', function() {
+    const board:Board = {
+      pieces: ['r:14','P:34','K:54'].map(buildPiece)
+    }
+    const ms = pawn({x:6,y:6},board)
+
+    expect(ms).to.have.deep.members([{x:6,y:7}])
+  });
+
+})

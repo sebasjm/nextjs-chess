@@ -27,11 +27,11 @@ const validAnd = (cond1:D, cond2:F) => (pos:Piece, board: Board):IsMoveValid => 
   return cond2(p[0])(p[1],board)
 }
 
-const validTrue:D = (pos, board)=> ({} as any)
+const validTrue:F = (move:Delta) => (pos, board):IsMoveValid=> ([move,pos,board] as any)
 const validFalse:D = (pos, board)=> (null as any)
 
 const validAll = (...conds:D[]) => (pos:Piece, board: Board):IsMoveValid => {
-  return conds.reduce((prev,val) => !prev(pos,board)? validFalse : val, validTrue)(pos,board)
+  return conds.reduce((prev,val) => !prev(pos,board)? validFalse : val, conds[0])(pos,board)
 }
 
 // for the pawn
@@ -135,17 +135,24 @@ export interface Board {
   castlePosible?: boolean; //is still posible to castle?
 }
 
-const sevenWith = (f: (i:number) => Delta) => Array.from({ length: 7 }, (v, i) => f(i))
+const arraySizeSeven = [0,1,2,3,4,5,6]
+const expandStepToPath = (v,i,a) => [...a].reverse().slice(-i-1).reverse()
+const checkValidInTheMiddle = (validator:F) => x => x.slice(0,-1).map( x => validator(x) ).concat(validTrue(x[x.length-1])) 
+
+const sevenWithClearPath = (direction: (i:number) => Delta) => 
+  arraySizeSeven.map(direction)
+    .map(expandStepToPath)
+    .map(checkValidInTheMiddle(validIfEmpty))
+    .map(x => x.reduce( (p,c) => validAll(p,c) ) )
 
 const buildValidator = (type: PieceType,moveValidators: D[]) => (pos:Piece, board:Board):Pos[] => 
   moveValidators
-    .map( v => v({...pos, type},board))
+    .map( v => v({...pos, type}, board))
     .filter(Boolean)
     .map( r => ({
       x: r[1].x + r[0][0],
       y: r[1].y + r[0][1],
     }))
-
 
 export const moves: {[k:string]: ((pos:Pos, board:Board) => Pos[])} = {
   p: buildValidator(PieceType.Pawn, [
@@ -172,36 +179,36 @@ export const moves: {[k:string]: ((pos:Pos, board:Board) => Pos[])} = {
    .map(x => validAnd(x,validIfKingSafe))
    .map(x => validAnd(x,validIfInside))),
   r: buildValidator(PieceType.Rook, [
-    ...sevenWith( i => [   0, i+1]),
-    ...sevenWith( i => [ i+1,   0]),
-    ...sevenWith( i => [-i-1,   0]),
-    ...sevenWith( i => [   0,-i-1]),
+    ...sevenWithClearPath( i => [   0, i+1]),
+    ...sevenWithClearPath( i => [ i+1,   0]),
+    ...sevenWithClearPath( i => [-i-1,   0]),
+    ...sevenWithClearPath( i => [   0,-i-1]),
   ]
-      .map(x => validIfNoFriend(x))
+      .map(x => validAnd(x,validIfNoFriend))
       .map(x => validAnd(x,validIfKingSafe))
       .map(x => validAnd(x,validIfInside)))
   ,
   b: buildValidator(PieceType.Bishop, [
-    ...sevenWith( i => [ i+1, i+1]),
-    ...sevenWith( i => [ i+1,-i-1]),
-    ...sevenWith( i => [-i-1, i+1]),
-    ...sevenWith( i => [-i-1,-i-1])
+    ...sevenWithClearPath( i => [ i+1, i+1]),
+    ...sevenWithClearPath( i => [ i+1,-i-1]),
+    ...sevenWithClearPath( i => [-i-1, i+1]),
+    ...sevenWithClearPath( i => [-i-1,-i-1]),
   ]
-      .map(x => validIfNoFriend(x))
+      .map(x => validAnd(x,validIfNoFriend))
       .map(x => validAnd(x,validIfKingSafe))
       .map(x => validAnd(x,validIfInside)))
   ,
   q: buildValidator(PieceType.Queen, [
-      ...sevenWith( i => [   0, i+1]),
-      ...sevenWith( i => [ i+1,   0]),
-      ...sevenWith( i => [-i-1,   0]),
-      ...sevenWith( i => [   0,-i-1]),
-      ...sevenWith( i => [ i+1, i+1]),
-      ...sevenWith( i => [ i+1,-i-1]),
-      ...sevenWith( i => [-i-1, i+1]),
-      ...sevenWith( i => [-i-1,-i-1])
+      ...sevenWithClearPath( i => [   0, i+1]),
+      ...sevenWithClearPath( i => [ i+1,   0]),
+      ...sevenWithClearPath( i => [-i-1,   0]),
+      ...sevenWithClearPath( i => [   0,-i-1]),
+      ...sevenWithClearPath( i => [ i+1, i+1]),
+      ...sevenWithClearPath( i => [ i+1,-i-1]),
+      ...sevenWithClearPath( i => [-i-1, i+1]),
+      ...sevenWithClearPath( i => [-i-1,-i-1]),
       ]    
-      .map(x => validIfNoFriend(x))
+      .map(x => validAnd(x,validIfNoFriend))
       .map(x => validAnd(x,validIfKingSafe))
       .map(x => validAnd(x,validIfInside)))
   ,
