@@ -56,8 +56,9 @@ const updateState = (state: State, action: Action):State => {
       }
 
       const pieceStrategy = moves[piece.name.toLowerCase()]
-      const pos = swap(toXY(from), state.whiteTurn) // normal position
-      const validMoves = pieceStrategy(pos,board)
+      const orig = swap(toXY(from), state.whiteTurn) 
+      const dest = swap(toXY(to), state.whiteTurn) 
+      const validMoves = pieceStrategy(orig,board)
         .map(x => fromXY(swap(x,state.whiteTurn))) //translate back position
 
       if (!validMoves.find( m => m === to)) {
@@ -76,7 +77,11 @@ const updateState = (state: State, action: Action):State => {
         })
         .filter(Boolean)
       
-      return { pieces: newPieces, whiteTurn: !state.whiteTurn };
+      return { 
+        pieces: newPieces, 
+        whiteTurn: !state.whiteTurn, 
+        passant: piece.name.toLowerCase() === 'p' && orig.y === 1 && dest.y === 3 ? orig.x : null
+      };
     default:
       throw new Error();
   }
@@ -104,7 +109,7 @@ function Demo() {
 
   return (
     <div className="demo" style={{ width: 600 }}>
-        <div>juegan {state.whiteTurn ? 'blancas' : 'negras'}</div>
+      <div>juegan {state.whiteTurn ? 'blancas' : 'negras'}</div>
 
       <Chess  
         whiteTurn={state.whiteTurn} pieces={state.pieces} passant={state.passant}
