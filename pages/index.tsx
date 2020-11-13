@@ -57,8 +57,7 @@ const updateState = (state: State, action: Action):State => {
 
       const pieceStrategy = moves[piece.name.toLowerCase()]
       const pos = swap(toXY(from), state.whiteTurn) // normal position
-      const validMoves = pieceStrategy(pos)
-        .map( m => m(board)).filter(Boolean)
+      const validMoves = pieceStrategy(pos,board)
         .map(x => fromXY(swap(x,state.whiteTurn))) //translate back position
 
       if (!validMoves.find( m => m === to)) {

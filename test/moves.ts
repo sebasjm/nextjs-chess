@@ -1,5 +1,4 @@
 import { expect } from 'chai';
-import pieces from '../src/pieces';
 import { moves, Board, Piece, pieceTypeByName } from '../src/logic';
 import 'mocha';
 
@@ -10,9 +9,7 @@ const buildPiece = (name:string):Piece => ({
   foe: name.charAt(0) === name.charAt(0).toLocaleLowerCase(),
   type: pieceTypeByName(name.charAt(0))
 })
-// knigth({x,y}).map( m => m(pieces) ).filter(Boolean)
 
-// normalized board
 const { 
   p: pawn,
   n: knigth,
@@ -22,14 +19,14 @@ const {
   b: bishop,
 } = moves
 
-describe('chess moves with empty board, second algorithm', function() {
+describe('chess moves', function() {
 
   describe('pawn moves', function() {
     it('should have two moves when starts alone', function() {
       const board:Board = {
         pieces: [].map(buildPiece)
       }
-      const ms = pawn({x:1,y:1}).map( m => m(board)).filter(Boolean) 
+      const ms = pawn({x:1,y:1},board)
 
       expect(ms).to.have.deep.members([{x:1,y:2},{x:1,y:3}])
     });
@@ -38,7 +35,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: [].map(buildPiece)
       }
-      const ms = pawn({x:3,y:2}).map( m => m(board)).filter(Boolean)
+      const ms = pawn({x:3,y:2},board)
 
       expect(ms).to.have.deep.members([{x:3,y:3}])
     });
@@ -48,7 +45,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['p:02','p:22'].map(buildPiece)
       }
-      const ms = pawn({x:1,y:1}).map( m => m(board)).filter(Boolean) 
+      const ms = pawn({x:1,y:1},board)
 
       expect(ms).to.have.deep.members([
         {x:1,y:2},{x:1,y:3},{x:0,y:2},{x:2,y:2}
@@ -60,7 +57,7 @@ describe('chess moves with empty board, second algorithm', function() {
         pieces: ['q:33'].map(buildPiece)
       }
 
-      const ms = pawn({x:3,y:2}).map( m => m(board)).filter(Boolean) 
+      const ms = pawn({x:3,y:2},board)
 
       expect(ms).to.have.deep.members([])
     });
@@ -70,7 +67,7 @@ describe('chess moves with empty board, second algorithm', function() {
         pieces: ['q:12'].map(buildPiece)
       }
       
-      const ms = pawn({x:1,y:1}).map( m => m(board)).filter(Boolean) 
+      const ms = pawn({x:1,y:1},board)
 
       expect(ms).to.have.deep.members([])
     });
@@ -79,7 +76,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['q:12','q:22'].map(buildPiece)
       }
-      const ms = pawn({x:1,y:1}).map( m => m(board)).filter(Boolean) 
+      const ms = pawn({x:1,y:1},board)
 
       expect(ms).to.have.deep.members([{x:2,y:2}])
     });
@@ -89,7 +86,7 @@ describe('chess moves with empty board, second algorithm', function() {
         pieces: ['p:55'].map(buildPiece),
         passant: 5    
       }
-      const ms = pawn({x:4,y:5}).map( m => m(board)).filter(Boolean) 
+      const ms = pawn({x:4,y:5},board)
 
       expect(ms).to.have.deep.members([
         {x:4,y:6},{x:5,y:6}
@@ -101,7 +98,7 @@ describe('chess moves with empty board, second algorithm', function() {
         pieces: ['p:55','p:15'].map(buildPiece),
         passant: 1
       }
-      const ms = pawn({x:4,y:5}).map( m => m(board)).filter(Boolean) 
+      const ms = pawn({x:4,y:5},board)
 
       expect(ms).to.have.deep.members([
         {x:4,y:6}
@@ -112,7 +109,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['p:55','p:15'].map(buildPiece),
       }
-      const ms = pawn({x:4,y:5}).map( m => m(board)).filter(Boolean) 
+      const ms = pawn({x:4,y:5},board)
 
       expect(ms).to.have.deep.members([
         {x:4,y:6}
@@ -123,7 +120,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['q:12','q:22'].map(buildPiece)
       }
-      const ms = pawn({x:1,y:1}).map( m => m(board)).filter(Boolean) 
+      const ms = pawn({x:1,y:1},board)
 
       expect(ms).to.have.deep.members([{x:2,y:2}])
     });
@@ -132,16 +129,16 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: [].map(buildPiece)
       }
-      const ms = pawn({x:7,y:7}).map( m => m(board)).filter(Boolean)
+      const ms = pawn({x:7,y:7},board)
 
       expect(ms).to.have.deep.members([])
     });
 
-    it.skip('should not move if is protecting the king', function() {
+    it('should not move if is protecting the king', function() {
       const board:Board = {
-        pieces: ['r:14','k:54'].map(buildPiece)
+        pieces: ['r:14','K:54'].map(buildPiece)
       }
-      const ms = pawn({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = pawn({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
       ])
@@ -153,7 +150,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: [].map(buildPiece)
       }
-      const ms = knigth({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = knigth({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
         {x:6,y:5},{x:6,y:3},
@@ -166,7 +163,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: [].map(buildPiece)
       }
-      const ms = knigth({x:7,y:2}).map( m => m(board)).filter(Boolean) 
+      const ms = knigth({x:7,y:2},board)
 
       expect(ms).to.have.deep.members([
         {x:6,y:4},{x:6,y:0},
@@ -178,7 +175,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['P:60'].map(buildPiece)
       }
-      const ms = knigth({x:7,y:2}).map( m => m(board)).filter(Boolean) 
+      const ms = knigth({x:7,y:2},board)
 
       expect(ms).to.have.deep.members([
         {x:6,y:4},
@@ -190,7 +187,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['p:60','P:71','P:61','P:51'].map(buildPiece)
       }
-      const ms = knigth({x:7,y:2}).map( m => m(board)).filter(Boolean) 
+      const ms = knigth({x:7,y:2},board)
 
       expect(ms).to.have.deep.members([
         {x:6,y:4},{x:6,y:0},
@@ -198,11 +195,11 @@ describe('chess moves with empty board, second algorithm', function() {
       ])
     });
 
-    it.skip('should not move if is protecting the king', function() {
+    it('should not move if is protecting the king', function() {
       const board:Board = {
-        pieces: ['r:14','k:54'].map(buildPiece)
+        pieces: ['r:14','K:54'].map(buildPiece)
       }
-      const ms = knigth({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = knigth({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
       ])
@@ -214,7 +211,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: [].map(buildPiece)
       }
-      const ms = king({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = king({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
         {x:5,y:5},{x:5,y:4},
@@ -228,7 +225,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: [].map(buildPiece)
       }
-      const ms = king({x:7,y:2}).map( m => m(board)).filter(Boolean) 
+      const ms = king({x:7,y:2},board)
 
       expect(ms).to.have.deep.members([
         {x:7,y:1},{x:6,y:1},
@@ -241,7 +238,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['p:71','P:73'].map(buildPiece)
       }
-      const ms = king({x:7,y:2}).map( m => m(board)).filter(Boolean) 
+      const ms = king({x:7,y:2},board)
 
       expect(ms).to.have.deep.members([
         {x:7,y:1},{x:6,y:1},
@@ -249,16 +246,31 @@ describe('chess moves with empty board, second algorithm', function() {
       ])
     });
 
-    it.skip('should not eat guarded enemy', function() {
+    it('should not eat a guarded enemy by pawn', function() {
       const board:Board = {
-        pieces: ['p:71','r:41'].map(buildPiece)
+        pieces: ['p:55','p:46'].map(buildPiece)
       }
-      const ms = king({x:7,y:2}).map( m => m(board)).filter(Boolean) 
+      const ms = king({x:6,y:4},board)
 
       expect(ms).to.have.deep.members([
-                  {x:6,y:1},
-        {x:6,y:2},{x:6,y:3},
-        {x:7,y:3},
+        {x:5,y:3},
+        {x:6,y:3},{x:6,y:5},
+        {x:7,y:3},{x:7,y:5},
+        {x:5,y:4},{x:7,y:4},
+      ])
+    });
+
+    it.skip('should not eat guarded enemy by rook', function() {
+      const board:Board = {
+        pieces: ['p:24','r:14'].map(buildPiece)
+      }
+      const ms = king({x:6,y:4},board)
+
+      expect(ms).to.have.deep.members([
+        {x:5,y:3},{x:5,y:5},
+        {x:6,y:3},{x:6,y:5},
+        {x:7,y:3},{x:7,y:5},
+        {x:5,y:4},{x:7,y:4},
       ])
     });
 
@@ -269,7 +281,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: [].map(buildPiece)
       }
-      const ms = rook({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = rook({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
         {x:4,y:5},{x:4,y:6},{x:4,y:7},
@@ -284,7 +296,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['P:46','P:54'].map(buildPiece)
       }
-      const ms = rook({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = rook({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
         {x:4,y:5},
@@ -299,7 +311,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['p:46','p:54'].map(buildPiece)
       }
-      const ms = rook({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = rook({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
         {x:4,y:5},{x:4,y:6},
@@ -310,13 +322,24 @@ describe('chess moves with empty board, second algorithm', function() {
       ])
     });
 
-    it.skip('should not move if is protecting the king', function() {
+    it('should not move if is protecting the king', function() {
       const board:Board = {
-        pieces: ['r:14','k:54'].map(buildPiece)
+        pieces: ['b:00','K:55'].map(buildPiece)
       }
-      const ms = rook({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = rook({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([])
+    });
+
+    it('should be able to eat to protect the king', function() {
+      const board:Board = {
+        pieces: ['r:14','K:54'].map(buildPiece)
+      }
+      const ms = rook({x:4,y:4},board)
+
+      expect(ms).to.have.deep.members([
+        {x:1, y:4}
+      ])
     });
   });
 
@@ -325,7 +348,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: [].map(buildPiece)
       }
-      const ms = bishop({x:0,y:0}).map( m => m(board)).filter(Boolean) 
+      const ms = bishop({x:0,y:0},board)
 
       expect(ms).to.have.deep.members([
         {x:1,y:1},{x:2,y:2},{x:3,y:3},
@@ -338,7 +361,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: [].map(buildPiece)
       }
-      const ms = bishop({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = bishop({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
         {x:1,y:1},{x:2,y:2},{x:3,y:3},
@@ -354,7 +377,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['P:33','P:26'].map(buildPiece)
       }
-      const ms = bishop({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = bishop({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
         
@@ -370,7 +393,7 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['P:33','P:26'].map(buildPiece)
       }
-      const ms = bishop({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = bishop({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([
                             {x:3,y:3},
@@ -382,13 +405,24 @@ describe('chess moves with empty board, second algorithm', function() {
         ])
     });
 
-    it.skip('should not move if is protecting the king', function() {
+    it('should not move if is protecting the king', function() {
       const board:Board = {
-        pieces: ['r:14','k:54'].map(buildPiece)
+        pieces: ['r:14','K:54'].map(buildPiece)
       }
-      const ms = bishop({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = bishop({x:4,y:4},board)
 
       expect(ms).to.have.deep.members([])
+    });
+
+    it('should be able to eat to protect the king', function() {
+      const board:Board = {
+        pieces: ['b:00','K:55'].map(buildPiece)
+      }
+      const ms = bishop({x:4,y:4},board)
+
+      expect(ms).to.have.deep.members([
+        {x:0, y:0}
+      ])
     });
   });
 
@@ -399,9 +433,9 @@ describe('chess moves with empty board, second algorithm', function() {
         pieces: [].map(buildPiece)
       }
       const pos = {x:4,y:4}
-      const q_ms = queen(pos).map( m => m(board)).filter(Boolean) 
-      const b_ms = bishop(pos).map( m => m(board)).filter(Boolean) 
-      const r_ms = rook(pos).map( m => m(board)).filter(Boolean) 
+      const q_ms = queen(pos,board)
+      const b_ms = bishop(pos,board)
+      const r_ms = rook(pos,board)
 
       expect(q_ms).to.have.deep.members([...b_ms, ...r_ms])
     });
@@ -411,9 +445,9 @@ describe('chess moves with empty board, second algorithm', function() {
         pieces: [].map(buildPiece)
       }
       const pos = {x:0,y:0}
-      const q_ms = queen(pos).map( m => m(board)).filter(Boolean) 
-      const b_ms = bishop(pos).map( m => m(board)).filter(Boolean) 
-      const r_ms = rook(pos).map( m => m(board)).filter(Boolean) 
+      const q_ms = queen(pos,board)
+      const b_ms = bishop(pos,board)
+      const r_ms = rook(pos,board)
 
       expect(q_ms).to.have.deep.members([...b_ms, ...r_ms])
     });
@@ -423,9 +457,9 @@ describe('chess moves with empty board, second algorithm', function() {
         pieces: ['P:33','P:26'].map(buildPiece)
       }
       const pos = {x:4,y:4}
-      const q_ms = queen(pos).map( m => m(board)).filter(Boolean) 
-      const b_ms = bishop(pos).map( m => m(board)).filter(Boolean) 
-      const r_ms = rook(pos).map( m => m(board)).filter(Boolean) 
+      const q_ms = queen(pos,board)
+      const b_ms = bishop(pos,board)
+      const r_ms = rook(pos,board)
 
       expect(q_ms).to.have.deep.members([...b_ms, ...r_ms])
     });
@@ -434,12 +468,12 @@ describe('chess moves with empty board, second algorithm', function() {
       const board:Board = {
         pieces: ['P:33','P:26'].map(buildPiece)
       }
-      const ms = queen({x:4,y:4}).map( m => m(board)).filter(Boolean) 
+      const ms = queen({x:4,y:4},board)
 
       const pos = {x:4,y:4}
-      const q_ms = queen(pos).map( m => m(board)).filter(Boolean) 
-      const b_ms = bishop(pos).map( m => m(board)).filter(Boolean) 
-      const r_ms = rook(pos).map( m => m(board)).filter(Boolean) 
+      const q_ms = queen(pos,board)
+      const b_ms = bishop(pos,board)
+      const r_ms = rook(pos,board)
 
       expect(q_ms).to.have.deep.members([...b_ms, ...r_ms])
     });

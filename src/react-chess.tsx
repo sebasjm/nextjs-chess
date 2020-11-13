@@ -178,8 +178,7 @@ const updateState = (state: State, action: Action):State => {
 
       const pieceStrategy = moves[action.data.draggingPiece.name.toLowerCase()]
       const pos = swap(action.data.dragFrom, !action.data.whiteTurn) // normal position
-      const validMoves = pieceStrategy(pos)
-        .map( m => m(board)).filter(Boolean)
+      const validMoves = pieceStrategy(pos,board)
         .map(x => swap(x,!action.data.whiteTurn)) //translate back position
 
       return {...state, ...action.data, marks: validMoves }
