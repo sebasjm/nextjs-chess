@@ -72,7 +72,7 @@ const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid 
   const enemyBoard:Board = {
     pieces: [...board.pieces
       .filter( e => (e.x !== orig.x || e.y !== orig.y) && (e.x !== dest.x || e.y !== dest.y))
-      .filter( e => e.foe && e.type !== PieceType.King) //remove enemy king to avoid loop
+      .filter( e => !e.foe || e.type !== PieceType.King) //remove enemy king to avoid loop
       .map( p => ({
           x: p.x,
           y: 7-p.y,

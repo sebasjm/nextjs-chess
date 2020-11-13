@@ -484,7 +484,7 @@ describe('chess moves', function() {
 
 describe('regression test', function() {
 
-  it.skip('should not block pieces when king is covered', function() {
+  it('should not block pieces when king is covered', function() {
     const board:Board = {
       pieces: ['r:14','P:34','K:54'].map(buildPiece)
     }
