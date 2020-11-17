@@ -493,4 +493,12 @@ describe('regression test', function() {
     expect(ms).to.have.deep.members([{x:6,y:7}])
   });
 
+  it('should not check through king', function() {
+    const board:Board = {
+      pieces: ['r:14','k:24','K:54'].map(buildPiece)
+    }
+    const ms = pawn({x:3,y:4},board)
+
+    expect(ms).to.have.deep.members([{x:3,y:5}])
+  });
 })

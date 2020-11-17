@@ -48,10 +48,10 @@ const validIfEmpty = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
   return !piece ? [move,pos,board] : null
 }
 
-const validIfEmptyAndPassant = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
+const validIfEmptyAndRank1 = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
   const [x,y] = move
   const piece = board.pieces.find(p => p.x === pos.x+x && p.y === pos.y+y)
-  return !piece && pos.y+y === 3 ? [move,pos,board] : null
+  return !piece && pos.y === 1 ? [move,pos,board] : null
 }
 
 // for the pawn
@@ -72,7 +72,6 @@ const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid 
   const enemyBoard:Board = {
     pieces: [...board.pieces
       .filter( e => (e.x !== orig.x || e.y !== orig.y) && (e.x !== dest.x || e.y !== dest.y))
-      .filter( e => !e.foe || e.type !== PieceType.King) //remove enemy king to avoid loop
       .map( p => ({
           x: p.x,
           y: 7-p.y,
@@ -90,7 +89,7 @@ const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid 
   }
   const foes = enemyBoard.pieces.filter( p => !p.foe )
   const safe = !foes.find( foe => {
-    const attackOfFoe = movesByType[foe.type](foe,enemyBoard)
+    const attackOfFoe = threatsByType[foe.type](foe,enemyBoard)
     const check = !!attackOfFoe.find( p => p.x === king.x && p.y === 7-king.y)
     return check
   } )
@@ -139,7 +138,7 @@ const arraySizeSeven = [0,1,2,3,4,5,6]
 const expandStepToPath = (v,i,a) => [...a].reverse().slice(-i-1).reverse()
 const checkValidInTheMiddle = (validator:F) => x => x.slice(0,-1).map( x => validator(x) ).concat(validTrue(x[x.length-1])) 
 
-const sevenWithClearPath = (direction: (i:number) => Delta) => 
+const sevenWithClearPath = (direction: (i:number) => Delta) :D[] => 
   arraySizeSeven.map(direction)
     .map(expandStepToPath)
     .map(checkValidInTheMiddle(validIfEmpty))
@@ -154,18 +153,19 @@ const buildValidator = (type: PieceType,moveValidators: D[]) => (pos:Piece, boar
       y: r[1].y + r[0][1],
     }))
 
-export const moves: {[k:string]: ((pos:Pos, board:Board) => Pos[])} = {
-  p: buildValidator(PieceType.Pawn, [
+
+const pawnMoves = [
     validIfEmpty([0,1]),
     validOr(validIfPassant, validIfEnemy)([1,1]),
     validOr(validIfPassant, validIfEnemy)([-1,1]),
-    validAll(validIfEmpty([0,1]), validIfEmptyAndPassant([0,2])),
+    validAll(validIfEmpty([0,1]), validIfEmptyAndRank1([0,2])),
   ]
-   .map(x => validAnd(x,validIfNoFriend))
-   .map(x => validAnd(x,validIfKingSafe))
-   .map(x => validAnd(x,validIfInside)))
-  ,
-  n: buildValidator(PieceType.Knigth, ([
+ .map(x => validAnd(x,validIfNoFriend))
+ .map(x => validAnd(x,validIfInside));
+
+const pawnMovesWithKingSafe = pawnMoves.map(x => validAnd(x,validIfKingSafe))
+
+const knigthMoves = ([
     [+1,+2],
     [+1,-2],
     [-1,+2],
@@ -175,44 +175,38 @@ export const moves: {[k:string]: ((pos:Pos, board:Board) => Pos[])} = {
     [-2,+1],
     [-2,-1],
   ] as Delta[])
-   .map(x => validIfNoFriend(x))
-   .map(x => validAnd(x,validIfKingSafe))
-   .map(x => validAnd(x,validIfInside))),
-  r: buildValidator(PieceType.Rook, [
+ .map(x => validIfNoFriend(x))
+ .map(x => validAnd(x,validIfKingSafe))
+
+const knigthMovesWithKingSafe = knigthMoves.map(x => validAnd(x,validIfInside))
+
+const rookMoves = [
     ...sevenWithClearPath( i => [   0, i+1]),
     ...sevenWithClearPath( i => [ i+1,   0]),
     ...sevenWithClearPath( i => [-i-1,   0]),
     ...sevenWithClearPath( i => [   0,-i-1]),
   ]
-      .map(x => validAnd(x,validIfNoFriend))
-      .map(x => validAnd(x,validIfKingSafe))
-      .map(x => validAnd(x,validIfInside)))
-  ,
-  b: buildValidator(PieceType.Bishop, [
-    ...sevenWithClearPath( i => [ i+1, i+1]),
-    ...sevenWithClearPath( i => [ i+1,-i-1]),
-    ...sevenWithClearPath( i => [-i-1, i+1]),
-    ...sevenWithClearPath( i => [-i-1,-i-1]),
+    .map(x => validAnd(x,validIfNoFriend))
+    .map(x => validAnd(x,validIfInside))
+
+const rookMovesWithKingSafe = rookMoves.map(x => validAnd(x,validIfKingSafe))
+
+const bishopMoves = [
+  ...sevenWithClearPath( i => [ i+1, i+1]),
+  ...sevenWithClearPath( i => [ i+1,-i-1]),
+  ...sevenWithClearPath( i => [-i-1, i+1]),
+  ...sevenWithClearPath( i => [-i-1,-i-1]),
   ]
-      .map(x => validAnd(x,validIfNoFriend))
-      .map(x => validAnd(x,validIfKingSafe))
-      .map(x => validAnd(x,validIfInside)))
-  ,
-  q: buildValidator(PieceType.Queen, [
-      ...sevenWithClearPath( i => [   0, i+1]),
-      ...sevenWithClearPath( i => [ i+1,   0]),
-      ...sevenWithClearPath( i => [-i-1,   0]),
-      ...sevenWithClearPath( i => [   0,-i-1]),
-      ...sevenWithClearPath( i => [ i+1, i+1]),
-      ...sevenWithClearPath( i => [ i+1,-i-1]),
-      ...sevenWithClearPath( i => [-i-1, i+1]),
-      ...sevenWithClearPath( i => [-i-1,-i-1]),
-      ]    
-      .map(x => validAnd(x,validIfNoFriend))
-      .map(x => validAnd(x,validIfKingSafe))
-      .map(x => validAnd(x,validIfInside)))
-  ,
-  k: buildValidator(PieceType.King, ([
+  .map(x => validAnd(x,validIfNoFriend))
+  .map(x => validAnd(x,validIfInside))
+
+const bishopMovesWithKingSafe = bishopMoves.map(x => validAnd(x,validIfKingSafe))
+
+const queenMoves = [...rookMoves, ...bishopMoves]
+
+const queenMovesWithKingSafe = queenMoves.map(x => validAnd(x,validIfKingSafe))
+
+const kingMoves = ([
     [+1,+1],
     [+1, 0],
     [+1,-1],
@@ -222,20 +216,38 @@ export const moves: {[k:string]: ((pos:Pos, board:Board) => Pos[])} = {
     [-1,+1],
     [ 0,+1],
   ] as Delta[])
-    .map(x => validIfNoFriend(x))
-    .map(x => validAnd(x,validIfKingSafe))
-    .map(x => validAnd(x,validIfInside))),
+  .map(x => validIfNoFriend(x))
+  .map(x => validAnd(x,validIfInside))
+
+const kingMovesWithKingSafe = kingMoves.map(x => validAnd(x,validIfKingSafe))
+
+export const moves: {[k:string]: ((pos:Pos, board:Board) => Pos[])} = {
+  p: buildValidator(PieceType.Pawn, pawnMovesWithKingSafe),
+  n: buildValidator(PieceType.Knigth, knigthMovesWithKingSafe),
+  r: buildValidator(PieceType.Rook, rookMovesWithKingSafe),
+  b: buildValidator(PieceType.Bishop, bishopMovesWithKingSafe),
+  q: buildValidator(PieceType.Queen, queenMovesWithKingSafe),
+  k: buildValidator(PieceType.King, kingMovesWithKingSafe),
+}
+
+export const threats: {[k:string]: ((pos:Pos, board:Board) => Pos[])} = {
+  p: buildValidator(PieceType.Pawn, pawnMoves),
+  n: buildValidator(PieceType.Knigth, knigthMoves),
+  r: buildValidator(PieceType.Rook, rookMoves),
+  b: buildValidator(PieceType.Bishop, bishopMoves),
+  q: buildValidator(PieceType.Queen, queenMoves),
+  k: buildValidator(PieceType.King, kingMoves),
 }
 
 export const swap = ({x,y}:{x:number,y:number}, swap: boolean) => ({x,y: swap ? y : 7-y})
 
-const movesByType = [
-  moves.p,
-  moves.n,
-  moves.r,
-  moves.b,
-  moves.q,
-  moves.k,
+const threatsByType = [
+  threats.p,
+  threats.n,
+  threats.r,
+  threats.b,
+  threats.q,
+  threats.k,
 ]
 
 export const pieceTypeByName = (str:string) => {
