@@ -57,10 +57,11 @@ const validIfEmptyAndRank1 = (move:Delta) => (pos:Piece, board: Board):IsMoveVal
 // for the pawn
 const validIfPassant = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
   const [x,y] = move
+  if (board.passant !== pos.x+x) return null
   const piece = board.pieces.find(p => p.x === pos.x+x && p.y === pos.y+y-1)
   const isEnemy = piece && piece.foe
 
-  return isEnemy && board.passant === piece.x ? [move,pos,board] : null
+  return isEnemy ? [move,pos,board] : null
 }
 
 const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid => {
@@ -97,6 +98,18 @@ const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid 
   return safe ? [move,piece,board] : null
 }
 
+const validIfRigthCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
+  const x = pos.x + move[0]
+  const y = pos.y + move[1]
+  return x <= 7 && x >= 0 && y <= 7 && y >= 0 ? [move,pos,board] : null
+}
+
+const validIfLeftCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
+  const x = pos.x + move[0]
+  const y = pos.y + move[1]
+  return x <= 7 && x >= 0 && y <= 7 && y >= 0 ? [move,pos,board] : null
+}
+
 const validIfInside = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
   const x = pos.x + move[0]
   const y = pos.y + move[1]
@@ -131,7 +144,8 @@ export interface Piece {
 export interface Board {
   pieces: Piece[];// pieces on board
   passant?: number; //did foe an en'passant on last move?
-  castlePosible?: boolean; //is still posible to castle?
+  didCastle?: number; //is still posible to castle?
+  foeDidCastle?: number;
 }
 
 const arraySizeSeven = [0,1,2,3,4,5,6]
@@ -176,9 +190,9 @@ const knigthMoves = ([
     [-2,-1],
   ] as Delta[])
  .map(x => validIfNoFriend(x))
- .map(x => validAnd(x,validIfKingSafe))
+ .map(x => validAnd(x,validIfInside))
 
-const knigthMovesWithKingSafe = knigthMoves.map(x => validAnd(x,validIfInside))
+const knigthMovesWithKingSafe = knigthMoves.map(x => validAnd(x,validIfKingSafe))
 
 const rookMoves = [
     ...sevenWithClearPath( i => [   0, i+1]),
@@ -218,6 +232,8 @@ const kingMoves = ([
   ] as Delta[])
   .map(x => validIfNoFriend(x))
   .map(x => validAnd(x,validIfInside))
+  .concat( validIfRigthCastle([2,0]) )
+  .concat( validIfLeftCastle([-2,0]) )
 
 const kingMovesWithKingSafe = kingMoves.map(x => validAnd(x,validIfKingSafe))
 
