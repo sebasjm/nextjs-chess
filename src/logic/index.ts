@@ -98,16 +98,79 @@ const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid 
   return safe ? [move,piece,board] : null
 }
 
-const validIfRigthCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
-  const x = pos.x + move[0]
-  const y = pos.y + move[1]
-  return x <= 7 && x >= 0 && y <= 7 && y >= 0 ? [move,pos,board] : null
+const validIfShortCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
+  // history ok?
+  if (board.castle?.didMoveKing || board.castle?.didMoveShortTower) return null
+
+  // pieces in place?
+  const king  = board.pieces.find(p => p.x === 4 && p.y === 0)
+  const path5 = board.pieces.find(p => p.x === 5 && p.y === 0)
+  const path6 = board.pieces.find(p => p.x === 6 && p.y === 0)
+  const tower = board.pieces.find(p => p.x === 7 && p.y === 0)
+
+  if (!tower || tower.type != PieceType.Rook 
+    || path5 || path6 
+    || !king || king.type != PieceType.King) return null
+
+  // path is safe?
+  const enemyBoard:Board = {
+    pieces: [...board.pieces
+      .map( p => ({
+          x: p.x,
+          y: 7-p.y,
+          type: p.type,
+          foe: !p.foe
+        })
+      )
+    ],
+  }
+  
+  const foes = enemyBoard.pieces.filter( p => !p.foe )
+  const pathSafe = !foes.find( foe => {
+    const attackOfFoe = threatsByType[foe.type](foe,enemyBoard)
+    const celd5 = !!attackOfFoe.find( p => p.x === 5 && p.y === 7)
+    const celd6 = !!attackOfFoe.find( p => p.x === 6 && p.y === 7)
+    return celd5 && celd6
+  } )
+
+  return pathSafe ? [move,pos,board] : null
 }
 
-const validIfLeftCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
-  const x = pos.x + move[0]
-  const y = pos.y + move[1]
-  return x <= 7 && x >= 0 && y <= 7 && y >= 0 ? [move,pos,board] : null
+const validIfLongCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
+  if (board.castle?.didMoveKing || board.castle?.didMoveLongTower) return null
+  const tower = board.pieces.find(p => p.x === 0 && p.y === 0)
+  const path1 = board.pieces.find(p => p.x === 1 && p.y === 0)
+  const path2 = board.pieces.find(p => p.x === 2 && p.y === 0)
+  const path3 = board.pieces.find(p => p.x === 3 && p.y === 0)
+  const king  = board.pieces.find(p => p.x === 4 && p.y === 0)
+
+  if (!tower || tower.type != PieceType.Rook 
+    || path1 || path2 || path3 
+    || !king || king.type != PieceType.King) return null
+  
+  const enemyBoard:Board = {
+    pieces: [...board.pieces
+      .map( p => ({
+          x: p.x,
+          y: 7-p.y,
+          type: p.type,
+          foe: !p.foe
+        })
+      )
+    ],
+  }
+
+  const foes = enemyBoard.pieces.filter( p => !p.foe )
+
+  const pathSafe = !foes.find( foe => {
+    const attackOfFoe = threatsByType[foe.type](foe,enemyBoard)
+    const celd1 = !!attackOfFoe.find( p => p.x === 1 && p.y === 7)
+    const celd2 = !!attackOfFoe.find( p => p.x === 2 && p.y === 7)
+    const celd3 = !!attackOfFoe.find( p => p.x === 3 && p.y === 7)
+    return celd1 || celd2 || celd3
+  } )
+
+  return pathSafe ? [move,pos,board] : null
 }
 
 const validIfInside = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
@@ -144,8 +207,11 @@ export interface Piece {
 export interface Board {
   pieces: Piece[];// pieces on board
   passant?: number; //did foe an en'passant on last move?
-  didCastle?: number; //is still posible to castle?
-  foeDidCastle?: number;
+  castle?: {
+    didMoveKing?: boolean; //is still posible to castle?
+    didMoveShortTower?: boolean; //is still posible to castle?
+    didMoveLongTower?: boolean; //is still posible to castle?
+  };
 }
 
 const arraySizeSeven = [0,1,2,3,4,5,6]
@@ -232,10 +298,11 @@ const kingMoves = ([
   ] as Delta[])
   .map(x => validIfNoFriend(x))
   .map(x => validAnd(x,validIfInside))
-  .concat( validIfRigthCastle([2,0]) )
-  .concat( validIfLeftCastle([-2,0]) )
 
-const kingMovesWithKingSafe = kingMoves.map(x => validAnd(x,validIfKingSafe))
+const kingMovesWithKingSafe = kingMoves
+  .concat( validIfLongCastle([-2,0]) )
+  .concat( validIfShortCastle([2,0]) )
+  .map(x => validAnd(x,validIfKingSafe))
 
 export const moves: {[k:string]: ((pos:Pos, board:Board) => Pos[])} = {
   p: buildValidator(PieceType.Pawn, pawnMovesWithKingSafe),

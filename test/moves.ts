@@ -209,7 +209,8 @@ describe('chess moves', function() {
   describe('king moves', function() {
     it('should have eigth moves', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: [].map(buildPiece),
+        castle: { didMoveKing: true },
       }
       const ms = king({x:4,y:4},board)
 
@@ -223,7 +224,8 @@ describe('chess moves', function() {
 
     it('should not allow outside the board', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: [].map(buildPiece),
+        castle: { didMoveKing: true },
       }
       const ms = king({x:7,y:2},board)
 
@@ -236,7 +238,8 @@ describe('chess moves', function() {
 
     it('should eat foes but be blocked by friends', function() {
       const board:Board = {
-        pieces: ['p:71','P:73'].map(buildPiece)
+        pieces: ['p:71','P:73'].map(buildPiece),
+        castle: { didMoveKing: true },
       }
       const ms = king({x:7,y:2},board)
 
@@ -248,7 +251,8 @@ describe('chess moves', function() {
 
     it('should not eat a guarded enemy by pawn', function() {
       const board:Board = {
-        pieces: ['p:55','p:46'].map(buildPiece)
+        pieces: ['p:55','p:46'].map(buildPiece),
+        castle: { didMoveKing: true },
       }
       const ms = king({x:6,y:4},board)
 
@@ -262,7 +266,8 @@ describe('chess moves', function() {
 
     it('should not eat guarded enemy by rook', function() {
       const board:Board = {
-        pieces: ['p:24','r:14'].map(buildPiece)
+        pieces: ['p:24','r:14'].map(buildPiece),
+        castle: { didMoveKing: true },
       }
       const ms = king({x:6,y:4},board)
 
@@ -271,6 +276,144 @@ describe('chess moves', function() {
         {x:6,y:3},{x:6,y:5},
         {x:7,y:3},{x:7,y:5},
         {x:5,y:4},{x:7,y:4},
+      ])
+    });
+
+    it('should be able to castle in long', function() {
+      const board:Board = {
+        pieces: ['R:00','P:31','P:41','P:51','K:40'].map(buildPiece),
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
+        {x:2,y:0},
+      ])
+    });
+
+    it('should not be able to castle in long if has moved the king', function() {
+      const board:Board = {
+        pieces: ['R:00','P:31','P:41','P:51','K:40'].map(buildPiece),
+        castle: { didMoveKing: true },
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
+      ])
+    });
+
+    it('should not be able to castle in long if has moved the tower (long side)', function() {
+      const board:Board = {
+        pieces: ['R:00','P:31','P:41','P:51','K:40'].map(buildPiece),
+        castle: { didMoveLongTower: true },
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
+      ])
+    });
+
+    it('should not be able to castle in long if blocked', function() {
+      const board:Board = {
+        pieces: ['R:00','B:10','P:31','P:41','P:51','K:40'].map(buildPiece),
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
+      ])
+    });
+
+    it('should not be able to castle in long if path is attacked (1)', function() {
+      const board:Board = {
+        pieces: ['R:00','r:17','P:31','P:41','P:51','K:40'].map(buildPiece),
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
+      ])
+    });
+
+    it('should not be able to castle in long if path is attacked (2)', function() {
+      const board:Board = {
+        pieces: ['R:00','b:76','P:31','P:41','P:51','K:40'].map(buildPiece),
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
+      ])
+    });
+////
+    it('should be able to castle in short', function() {
+      const board:Board = {
+        pieces: ['R:70','P:31','P:41','P:51','K:40'].map(buildPiece),
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
+        {x:6,y:0},
+      ])
+    });
+
+    it('should not be able to castle in short if has moved the king', function() {
+      const board:Board = {
+        pieces: ['R:70','P:31','P:41','P:51','K:40'].map(buildPiece),
+        castle: { didMoveKing: true },
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
+      ])
+    });
+
+    it('should not be able to castle in short if has moved the tower (short side)', function() {
+      const board:Board = {
+        pieces: ['R:70','P:31','P:41','P:51','K:40'].map(buildPiece),
+        castle: { didMoveShortTower: true },
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
+      ])
+    });
+
+    it('should not be able to castle in short if blocked', function() {
+      const board:Board = {
+        pieces: ['R:70','B:60','P:31','P:41','P:51','K:40'].map(buildPiece),
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
+      ])
+    });
+
+    it('should not be able to castle in short if path is attacked (1)', function() {
+      const board:Board = {
+        pieces: ['R:70','r:67','P:31','P:41','P:51','K:40'].map(buildPiece),
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
+      ])
+    });
+
+    it('should not be able to castle in short if path is attacked (2)', function() {
+      const board:Board = {
+        pieces: ['R:70','b:15','P:31','P:41','K:40'].map(buildPiece),
+      }
+      const ms = king({x:4,y:0},board)
+
+      expect(ms).to.have.deep.members([
+        {x:3,y:0},{x:5,y:0},
       ])
     });
 
