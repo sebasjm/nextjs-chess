@@ -1,4 +1,3 @@
-import BlackKnight from "../pieces/BlackKnight"
 
 export const findPieceAtPosition = ({ pieces, pos }) => {
   for (let i = 0; i < pieces.length; i++) {
@@ -11,57 +10,57 @@ export const findPieceAtPosition = ({ pieces, pos }) => {
   return null
 }
 
-type F = (move:Delta) => (pos:Piece, board: Board) => IsMoveValid
+type F = (move:DeltaPos) => (pos:Pos, type:PieceType, board: Board) => IsMoveValid
 
-type D = (pos:Piece, board: Board) => IsMoveValid
+type D = (pos:Pos, type: PieceType, board: Board) => IsMoveValid
 
 //TODO: this could be better, like validAnd
-const validOr = (cond1:F, cond2:F) => (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
-  const xy1 = cond1(move)(pos,board)
-  return xy1 ? xy1 : cond2(move)(pos,board)
+const validOr = (cond1:F, cond2:F) => (move:DeltaPos) => (pos:Piece, type:PieceType, board: Board):IsMoveValid => {
+  const xy1 = cond1(move)(pos,type,board)
+  return xy1 ? xy1 : cond2(move)(pos,type,board)
 }
 
-const validAnd = (cond1:D, cond2:F) => (pos:Piece, board: Board):IsMoveValid => {
-  const p = cond1(pos,board)
+const validAnd = (cond1:D, cond2:F) => (pos:Pos, type:PieceType, board: Board):IsMoveValid => {
+  const p = cond1(pos,type,board)
   if (!p) return null
-  return cond2(p[0])(p[1],board)
+  return cond2(p[0])(p[1],type,board)
 }
 
-const validTrue:F = (move:Delta) => (pos, board):IsMoveValid=> ([move,pos,board] as any)
+const validTrue:F = (move:DeltaPos) => (pos, board):IsMoveValid=> ([move,pos,board] as any)
 const validFalse:D = (pos, board)=> (null as any)
 
-const validAll = (...conds:D[]) => (pos:Piece, board: Board):IsMoveValid => {
-  return conds.reduce((prev,val) => !prev(pos,board)? validFalse : val, conds[0])(pos,board)
+const validAll = (...conds:D[]) => (pos:Pos, type:PieceType, board: Board):IsMoveValid => {
+  return conds.reduce((prev,val) => !prev(pos,type,board)? validFalse : val, conds[0])(pos,type,board)
 }
 
 // for the pawn
-const validIfEnemy = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
-  const [x,y] = move
+const validIfEnemy = (move:DeltaPos) => (pos:Pos, type:PieceType, board: Board):IsMoveValid => {
+  const {x,y} = move
   const piece = board.pieces[pos.x+x+(pos.y+y)*8]
-  return piece && piece.foe ? [move,pos,board] : null
+  return piece && piece.foe ? [move,pos,type,board] : null
 }
 
 // for the bishop, rogue, queen
-const validIfEmpty = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
-  const [x,y] = move
+const validIfEmpty = (move:DeltaPos) => (pos:Pos, type:PieceType, board: Board):IsMoveValid => {
+  const {x,y} = move
   const piece = board.pieces[pos.x+x+(pos.y+y)*8]
-  return !piece ? [move,pos,board] : null
+  return !piece ? [move,pos,type,board] : null
 }
 
-const validIfEmptyAndRank1 = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
-  const [x,y] = move
+const validIfEmptyAndRank1 = (move:DeltaPos) => (pos:Pos, type:PieceType, board: Board):IsMoveValid => {
+  const {x,y} = move
   const piece = board.pieces[pos.x+x+(pos.y+y)*8]
-  return !piece && pos.y === 1 ? [move,pos,board] : null
+  return !piece && pos.y === 1 ? [move,pos,type,board] : null
 }
 
 // for the pawn
-const validIfPassant = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
-  const [x,y] = move
+const validIfPassant = (move:DeltaPos) => (pos:Pos, type:PieceType, board: Board):IsMoveValid => {
+  const {x,y} = move
   if (board.passant !== pos.x+x) return null
   const piece = board.pieces[pos.x+x+(pos.y+y-1)*8]
   const isEnemy = piece && piece.foe
 
-  return isEnemy ? [move,pos,board] : null
+  return isEnemy ? [move,pos,type,board] : null
 }
 
 export const orderPieces = <T extends Pos>(pieces:T[]):T[] => {
@@ -85,11 +84,11 @@ const asEnemyPieces = (pieces:Piece[]):Piece[] => {
   return emptyBoard
 }
 
-const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid => {
+const validIfKingSafe = (move:DeltaPos) => (piece:Pos, type:PieceType, board: Board):IsMoveValid => {
   const orig = piece
-  const dest = {x:piece.x + move[0], y:piece.y + move[1]}
-  const king = piece.type == PieceType.King ? dest : board.pieces.find(p => p && !p.foe && p.type === PieceType.King)
-  if (!king) return [move,piece,board] // we are safe if there is no king in the board
+  const dest = {x:piece.x + move.x, y:piece.y + move.y}
+  const king = type == PieceType.King ? dest : board.pieces.find(p => p && !p.foe && p.type === PieceType.King)
+  if (!king) return [move,piece,type,board] // we are safe if there is no king in the board
 
   const enemyBoard:Board = {
     pieces: asEnemyPieces(board.pieces),
@@ -98,8 +97,7 @@ const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid 
   enemyBoard.pieces[dest.x+(7-dest.y)*8] = {
     x: dest.x,
     y: 7-dest.y,
-    type: piece.type,
-    foe: true
+    type, foe: true
   }
   
   const foes = enemyBoard.pieces.filter( p => p && !p.foe )
@@ -109,10 +107,10 @@ const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid 
     return check
   } )
 
-  return safe ? [move,piece,board] : null
+  return safe ? [move,piece,type,board] : null
 }
 
-const validIfShortCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
+const validIfShortCastle = (move:DeltaPos) => (pos:Pos, type: PieceType, board: Board):IsMoveValid => {
   // history ok?
   if (board.castle?.didMoveKing || board.castle?.didMoveShortTower) return null
 
@@ -139,10 +137,10 @@ const validIfShortCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid
     return celd5 && celd6
   } )
 
-  return pathSafe ? [move,pos,board] : null
+  return pathSafe ? [move,pos,type,board] : null
 }
 
-const validIfLongCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
+const validIfLongCastle = (move:DeltaPos) => (pos:Pos, type: PieceType, board: Board):IsMoveValid => {
   if (board.castle?.didMoveKing || board.castle?.didMoveLongTower) return null
   const tower = board.pieces[0+0*8]
   const path1 = board.pieces[1+0*8]
@@ -168,24 +166,26 @@ const validIfLongCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid 
     return celd1 || celd2 || celd3
   } )
 
-  return pathSafe ? [move,pos,board] : null
+  return pathSafe ? [move,pos,type,board] : null
 }
 
-const validIfInside = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
-  const x = pos.x + move[0]
-  const y = pos.y + move[1]
-  return x <= 7 && x >= 0 && y <= 7 && y >= 0 ? [move,pos,board] : null
+const validIfInside = (move:DeltaPos) => (pos:Pos, type:PieceType, board: Board):IsMoveValid => {
+  const x = pos.x + move.x
+  const y = pos.y + move.y
+  return x <= 7 && x >= 0 && y <= 7 && y >= 0 ? [move,pos,type,board] : null
 }
 
-const validIfNoFriend = (move:Delta) => (pos:Piece, board: Board):IsMoveValid =>  {
-  const [x,y] = move
+const validIfNoFriend = (move:DeltaPos) => (pos:Pos, type:PieceType, board: Board):IsMoveValid =>  {
+  const {x,y} = move
   const piece = board.pieces[pos.x+x+(pos.y+y)*8]
   const isFriend = piece && !piece.foe
-  return !isFriend ? [move,pos,board] : null
+  return !isFriend ? [move,pos,type,board] : null
 }
 
-type IsMoveValid = [move:Delta, pos:Piece, board: Board] | null
+type IsMoveValid = [move:DeltaPos, pos:Pos, type:PieceType, board: Board] | null
 type Delta = [x:number,y:number]
+type DeltaPos = Pos
+const asDeltaPos = (d:Delta):DeltaPos => ({x:d[0],y:d[1]})
 
 interface Pos {
   x: number,
@@ -218,30 +218,32 @@ const checkValidInTheMiddle = (validator:F) => x => x.slice(0,-1).map( x => vali
 
 const sevenWithClearPath = (direction: (i:number) => Delta) :D[] => 
   arraySizeSeven.map(direction)
+    .map(asDeltaPos)
     .map(expandStepToPath)
     .map(checkValidInTheMiddle(validIfEmpty))
     .map(x => x.reduce( (p,c) => validAll(p,c) ) )
 
-const buildValidator = (type: PieceType, moveValidators: D[]) => (pos:Piece, board:Board):Pos[] => 
+const buildValidator = (type: PieceType, moveValidators: D[]) => (pos:Pos, board:Board):Pos[] => 
   moveValidators
-    .map( v => v({...pos, type}, board))
+    .map( v => v(pos, type, board))
     .filter(Boolean)
     .map( r => ({
-      x: r[1].x + r[0][0],
-      y: r[1].y + r[0][1],
+      x: r[1].x + r[0].x,
+      y: r[1].y + r[0].y,
     }))
 
 
 const pawnMoves = [
-    validIfEmpty([0,1]),
-    validOr(validIfPassant, validIfEnemy)([1,1]),
-    validOr(validIfPassant, validIfEnemy)([-1,1]),
-    validAll(validIfEmpty([0,1]), validIfEmptyAndRank1([0,2])),
+    validIfEmpty(asDeltaPos([0,1])),
+    validOr(validIfPassant, validIfEnemy)(asDeltaPos([1,1])),
+    validOr(validIfPassant, validIfEnemy)(asDeltaPos([-1,1])),
+    validAll(validIfEmpty(asDeltaPos([0,1])), validIfEmptyAndRank1(asDeltaPos([0,2]))),
   ]
  .map(x => validAnd(x,validIfNoFriend))
  .map(x => validAnd(x,validIfInside));
 
 const pawnMovesWithKingSafe = pawnMoves.map(x => validAnd(x,validIfKingSafe))
+
 
 const knigthMoves = ([
     [+1,+2],
@@ -253,6 +255,7 @@ const knigthMoves = ([
     [-2,+1],
     [-2,-1],
   ] as Delta[])
+ .map(asDeltaPos)
  .map(x => validIfNoFriend(x))
  .map(x => validAnd(x,validIfInside))
 
@@ -294,12 +297,13 @@ const kingMoves = ([
     [-1,+1],
     [ 0,+1],
   ] as Delta[])
+  .map(asDeltaPos)
   .map(x => validIfNoFriend(x))
   .map(x => validAnd(x,validIfInside))
 
 const kingMovesWithKingSafe = kingMoves
-  .concat( validIfLongCastle([-2,0]) )
-  .concat( validIfShortCastle([2,0]) )
+  .concat( validIfLongCastle(asDeltaPos([-2,0])) )
+  .concat( validIfShortCastle(asDeltaPos([2,0])) )
   .map(x => validAnd(x,validIfKingSafe))
 
 export const moves: {[k:string]: ((pos:Pos, board:Board) => Pos[])} = {
