@@ -10,6 +10,7 @@ interface State {
   pieces: string[];
   whiteTurn: boolean;
   passant?: number;
+
 }
 interface MovePiece {
   type: 'move';
@@ -26,32 +27,32 @@ type Action = MovePiece;
 
 const handler = { client: null }
 
-const translatePieces = (ps:string[], whiteTurn: boolean, exclude: string): Piece[] => orderPieces(ps.map( name => name === exclude ? null : ({
+function translatePieces(ps:string[], whiteTurn: boolean): Piece[] { return orderPieces(ps.map( name => ({
   x: name.codePointAt(2) - 'a'.codePointAt(0),
   y: (y => whiteTurn ? y : 7-y)(name.codePointAt(3) - '1'.codePointAt(0)),
   foe: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()), 
   type: pieceTypeByName(name.charAt(0))
 })).filter(Boolean))
+}
 
-
-const toXY = (s:string) => {
+function toXY(s:string) {
   return {
     x: s.codePointAt(0) - 'a'.codePointAt(0),
     y: s.codePointAt(1) - '1'.codePointAt(0)
   }
 }
-const fromXY = ({x,y}:{x:number, y:number}) => {
+function fromXY({x,y}:{x:number, y:number}) {
   return String.fromCodePoint('a'.codePointAt(0) + x) + String.fromCharCode('1'.codePointAt(0) + y)
 }
 
 
-const updateState = (state: State, action: Action):State => {
+function updateState(state: State, action: Action):State {
   switch (action.type) {
     case 'move':
       const {piece, from, to} = action.data
 
       const board:Board = {
-        pieces: translatePieces(state.pieces, state.whiteTurn, `${piece.name}@${from}`),
+        pieces: translatePieces(state.pieces, state.whiteTurn),
         passant: state.passant
       }
 
@@ -87,10 +88,11 @@ const updateState = (state: State, action: Action):State => {
   }
 }
 
-const resetState = ():State => ({
+function resetState():State { return ({
   pieces: getDefaultLineup(),
   whiteTurn: true
 })
+}
 
 const isWhite = (string) => /^[A-Z]*$/.test(string.charAt(0))
 

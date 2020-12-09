@@ -61,7 +61,7 @@ interface State {
 
 const size = 600
 
-const findPieceAtPosition = ({ pieces, pos }) => {
+function findPieceAtPosition({ pieces, pos }) {
   for (let i = 0; i < pieces.length; i++) {
     const piece = pieces[i]
     if (piece.indexOf(pos) === 2) {
@@ -74,13 +74,13 @@ const findPieceAtPosition = ({ pieces, pos }) => {
 
 const toPosition = ({ x, y }) => ({ x, y, pos: `${String.fromCharCode(decode.charCodeOffset + x)}${8 - y}` })
 
-const coordsToPosition = ({ tileSize, x, y }) => toPosition({
+function coordsToPosition ({ tileSize, x, y }) { return toPosition({
   x: Math.floor(x / tileSize),
   y: Math.floor(y / tileSize),
 })
+}
 
-
-const getSquareColor = ({ lightSquareColor, darkSquareColor, x, y }) => {
+function getSquareColor ({ lightSquareColor, darkSquareColor, x, y }) {
   const odd = x % 2
 
   if (y % 2) {
@@ -113,13 +113,14 @@ function LabelText({ drawLabels, x, y }) {
   return <span style={(isLeftColumn ? yLabelStyles : xLabelStyles) as CSSProperties}>{label}</span>
 }
 
-const cellStyles = ({ isTarget, lightSquareColor, darkSquareColor, x, y, isValid }) => ({
+function cellStyles({ isTarget, lightSquareColor, darkSquareColor, x, y, isValid }) {return ({
   ...squareStyles,
   background: getSquareColor({ lightSquareColor, darkSquareColor, x, y }),
   boxShadow: isTarget ? 'inset 0px 0px 0px 0.4vmin yellow' : (isValid ? 'inset 0px 0px 0px 0.4vmin green' : undefined),
 })
+}
 
-const Tiles = ({ targetTile, lightSquareColor, darkSquareColor, drawLabels, marks }) => <>
+function Tiles({ targetTile, lightSquareColor, darkSquareColor, drawLabels, marks }) {return <>
   {Array.from({ length: 64 }, (v, i) => {
     const x = Math.floor(i % 8);
     const y = Math.floor(i / 8);
@@ -134,9 +135,9 @@ const Tiles = ({ targetTile, lightSquareColor, darkSquareColor, drawLabels, mark
       <LabelText x={x} y={y} drawLabels={drawLabels} />
     </div>
   })}
-</>
+</>}
 
-const DraggablePieces = ({ pieces }) => <>
+function DraggablePieces({ pieces }) {return <>
   {pieces.map((decl, i) => {
     const { x, y, piece } = decode.fromPieceDecl(decl)
     const Piece = pieceComponents[piece]
@@ -144,7 +145,7 @@ const DraggablePieces = ({ pieces }) => <>
       <Piece x={x} y={y} />  
     </div>
   })}
-</>
+</>}
 
 interface MovingToAction {
   type: 'movingTo';
@@ -160,7 +161,7 @@ interface DropAction {
 type Action = MovingToAction | PickAction | DropAction;
 
 const translatePieces = (ps:string[], whiteTurn: boolean, exclude: string): Piece[] => orderPieces(ps
-.map( name => name === exclude ? null : ({
+.map( name => ({
   x: name.codePointAt(2) - 'a'.codePointAt(0),
   y: (y => whiteTurn ? y : 7-y)(name.codePointAt(3) - '1'.codePointAt(0)),
   foe: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()), 
@@ -189,10 +190,11 @@ const updateState = (state: State, action: Action):State => {
   }
 }
 
-const resetState = (size: number):State => ({
+function resetState (size: number):State { return ({
   tileSize: size / 8,
   boardSize: size
 })
+}
 
 function Chess({
     allowMoves = true,
