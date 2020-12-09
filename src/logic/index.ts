@@ -72,10 +72,15 @@ export const orderPieces = <T extends Pos>(pieces:T[]):T[] => {
   return emptyBoard
 }
 
-const asEnemyPieces = <T extends Pos>(pieces:T[]):T[] => {
+const asEnemyPieces = (pieces:Piece[]):Piece[] => {
   const emptyBoard = Array(8*8);
   pieces.forEach(p => {
-    if (p) emptyBoard[p.x+p.y*8] = p
+    if (p) emptyBoard[p.x+(7-p.y)*8] = {
+          x: p.x,
+          y: 7-p.y,
+          type: p.type,
+          foe: !p.foe
+    }
   })
   return emptyBoard
 }
@@ -87,24 +92,17 @@ const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid 
   if (!king) return [move,piece,board] // we are safe if there is no king in the board
 
   const enemyBoard:Board = {
-    pieces: orderPieces([...board.pieces
-      .filter( e => (e.x !== orig.x || e.y !== orig.y) && (e.x !== dest.x || e.y !== dest.y))
-      .map( p => ({
-          x: p.x,
-          y: 7-p.y,
-          type: p.type,
-          foe: !p.foe
-        })
-      ),({
-        x: dest.x,
-        y: 7-dest.y,
-        type: piece.type,
-        foe: true
-      })
-    ]),
-    // FIXME: should it calculate passant?
+    pieces: asEnemyPieces(board.pieces),
   }
-  const foes = enemyBoard.pieces.filter( p => !p.foe )
+  enemyBoard.pieces[orig.x+(7-orig.y)*8] = null
+  enemyBoard.pieces[dest.x+(7-dest.y)*8] = {
+    x: dest.x,
+    y: 7-dest.y,
+    type: piece.type,
+    foe: true
+  }
+  
+  const foes = enemyBoard.pieces.filter( p => p && !p.foe )
   const safe = !foes.find( foe => {
     const attackOfFoe = orderPieces(threatsByType[foe.type](foe,enemyBoard))
     const check = !!attackOfFoe[king.x+(7-king.y)*8]
@@ -130,15 +128,7 @@ const validIfShortCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid
 
   // path is safe?
   const enemyBoard:Board = {
-    pieces: orderPieces([...board.pieces
-      .map( p => ({
-          x: p.x,
-          y: 7-p.y,
-          type: p.type,
-          foe: !p.foe
-        })
-      )
-    ]),
+    pieces: asEnemyPieces(board.pieces),
   }
   
   const foes = enemyBoard.pieces.filter( p => !p.foe )
@@ -165,15 +155,7 @@ const validIfLongCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid 
     || !king || king.type != PieceType.King) return null
   
   const enemyBoard:Board = {
-    pieces: orderPieces([...board.pieces
-      .map( p => ({
-          x: p.x,
-          y: 7-p.y,
-          type: p.type,
-          foe: !p.foe
-        })
-      )
-    ]),
+    pieces: asEnemyPieces(board.pieces),
   }
 
   const foes = enemyBoard.pieces.filter( p => !p.foe )
@@ -240,7 +222,7 @@ const sevenWithClearPath = (direction: (i:number) => Delta) :D[] =>
     .map(checkValidInTheMiddle(validIfEmpty))
     .map(x => x.reduce( (p,c) => validAll(p,c) ) )
 
-const buildValidator = (type: PieceType,moveValidators: D[]) => (pos:Piece, board:Board):Pos[] => 
+const buildValidator = (type: PieceType, moveValidators: D[]) => (pos:Piece, board:Board):Pos[] => 
   moveValidators
     .map( v => v({...pos, type}, board))
     .filter(Boolean)
