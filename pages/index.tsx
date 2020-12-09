@@ -3,7 +3,7 @@ import React, { useEffect, useReducer, useState } from 'react';
 import Chess, { Dragging, getDefaultLineup } from '../src/react-chess'
 // import * as Ably from 'ably'
 // import axios from 'axios';
-import { Board, moves, Piece, pieceTypeByName, swap } from '../src/logic';
+import { orderPieces, Board, moves, Piece, pieceTypeByName, swap } from '../src/logic';
 
 interface Props { }
 interface State {
@@ -26,12 +26,12 @@ type Action = MovePiece;
 
 const handler = { client: null }
 
-const translatePieces = (ps:string[], whiteTurn: boolean, exclude: string): Piece[] => ps.map( name => name === exclude ? null : ({
+const translatePieces = (ps:string[], whiteTurn: boolean, exclude: string): Piece[] => orderPieces(ps.map( name => name === exclude ? null : ({
   x: name.codePointAt(2) - 'a'.codePointAt(0),
   y: (y => whiteTurn ? y : 7-y)(name.codePointAt(3) - '1'.codePointAt(0)),
   foe: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()), 
   type: pieceTypeByName(name.charAt(0))
-})).filter(Boolean)
+})).filter(Boolean))
 
 
 const toXY = (s:string) => {

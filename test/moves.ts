@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { moves, Board, Piece, pieceTypeByName } from '../src/logic';
+import { moves, Board, Piece, pieceTypeByName, PieceType } from '../src/logic';
 import 'mocha';
 
 //asume white are foe
@@ -9,6 +9,14 @@ const buildPiece = (name:string):Piece => ({
   foe: name.charAt(0) === name.charAt(0).toLocaleLowerCase(),
   type: pieceTypeByName(name.charAt(0))
 })
+
+const buildPieces = (piecesName: string[]):Piece[] => {
+  const emptyBoard = Array(8*8);
+  piecesName.map(buildPiece).forEach(p => {
+    emptyBoard[p.x+p.y*8] = p
+  })
+  return emptyBoard
+}
 
 const { 
   p: pawn,
@@ -24,7 +32,7 @@ describe('chess moves', function() {
   describe('pawn moves', function() {
     it('should have two moves when starts alone', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: buildPieces([])
       }
       const ms = pawn({x:1,y:1},board)
 
@@ -33,7 +41,7 @@ describe('chess moves', function() {
 
     it('should have one move when alone', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: buildPieces([]),
       }
       const ms = pawn({x:3,y:2},board)
 
@@ -43,7 +51,7 @@ describe('chess moves', function() {
 
     it('should have two moves when starts and can eat diagonally', function() {
       const board:Board = {
-        pieces: ['p:02','p:22'].map(buildPiece)
+        pieces: buildPieces(['p:02','p:22']),
       }
       const ms = pawn({x:1,y:1},board)
 
@@ -54,7 +62,7 @@ describe('chess moves', function() {
 
     it('should be blocked with an enemy in front', function() {
       const board:Board = {
-        pieces: ['q:33'].map(buildPiece)
+        pieces: buildPieces(['q:33']),
       }
 
       const ms = pawn({x:3,y:2},board)
@@ -64,7 +72,7 @@ describe('chess moves', function() {
 
     it('should be blocked the passant move with an enemy in front', function() {
       const board:Board = {
-        pieces: ['q:12'].map(buildPiece)
+        pieces: buildPieces(['q:12']),
       }
       
       const ms = pawn({x:1,y:1},board)
@@ -74,7 +82,7 @@ describe('chess moves', function() {
 
     it('should still valid to eat with a block in front', function() {
       const board:Board = {
-        pieces: ['q:12','q:22'].map(buildPiece)
+        pieces: buildPieces(['q:12','q:22']),
       }
       const ms = pawn({x:1,y:1},board)
 
@@ -83,7 +91,7 @@ describe('chess moves', function() {
 
     it('should be able to eat after enemy did passant', function() {
       const board:Board = {
-        pieces: ['p:55'].map(buildPiece),
+        pieces: buildPieces(['p:55']),
         passant: 5    
       }
       const ms = pawn({x:4,y:5},board)
@@ -95,7 +103,7 @@ describe('chess moves', function() {
 
     it('should not eat if enemy did passant but is far', function() {
       const board:Board = {
-        pieces: ['p:55','p:15'].map(buildPiece),
+        pieces: buildPieces(['p:55','p:15']),
         passant: 1
       }
       const ms = pawn({x:4,y:5},board)
@@ -107,7 +115,7 @@ describe('chess moves', function() {
 
     it('should not eat if enemy did not passant', function() {
       const board:Board = {
-        pieces: ['p:55','p:15'].map(buildPiece),
+        pieces: buildPieces(['p:55','p:15']),
       }
       const ms = pawn({x:4,y:5},board)
 
@@ -118,7 +126,7 @@ describe('chess moves', function() {
 
     it('should still valid to eat with a block in front', function() {
       const board:Board = {
-        pieces: ['q:12','q:22'].map(buildPiece)
+        pieces: buildPieces(['q:12','q:22']),
       }
       const ms = pawn({x:1,y:1},board)
 
@@ -127,7 +135,7 @@ describe('chess moves', function() {
 
     it('should not go outside the board', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: buildPieces([]),
       }
       const ms = pawn({x:7,y:7},board)
 
@@ -136,7 +144,7 @@ describe('chess moves', function() {
 
     it('should not move if is protecting the king', function() {
       const board:Board = {
-        pieces: ['r:14','K:54'].map(buildPiece)
+        pieces: buildPieces(['r:14','K:54']),
       }
       const ms = pawn({x:4,y:4},board)
 
@@ -148,7 +156,7 @@ describe('chess moves', function() {
   describe('knigth moves', function() {
     it('should have eigth moves', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: buildPieces([]),
       }
       const ms = knigth({x:4,y:4},board)
 
@@ -161,7 +169,7 @@ describe('chess moves', function() {
     });
     it('should not allow outside the board', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: buildPieces([]),
       }
       const ms = knigth({x:7,y:2},board)
 
@@ -173,7 +181,7 @@ describe('chess moves', function() {
 
     it('should not fall into a friend', function() {
       const board:Board = {
-        pieces: ['P:60'].map(buildPiece)
+        pieces: buildPieces(['P:60']),
       }
       const ms = knigth({x:7,y:2},board)
 
@@ -185,7 +193,7 @@ describe('chess moves', function() {
 
     it('should not be blocked and eat', function() {
       const board:Board = {
-        pieces: ['p:60','P:71','P:61','P:51'].map(buildPiece)
+        pieces: buildPieces(['p:60','P:71','P:61','P:51']),
       }
       const ms = knigth({x:7,y:2},board)
 
@@ -197,7 +205,7 @@ describe('chess moves', function() {
 
     it('should not move if is protecting the king', function() {
       const board:Board = {
-        pieces: ['r:14','K:54'].map(buildPiece)
+        pieces: buildPieces(['r:14','K:54']),
       }
       const ms = knigth({x:4,y:4},board)
 
@@ -209,7 +217,7 @@ describe('chess moves', function() {
   describe('king moves', function() {
     it('should have eigth moves', function() {
       const board:Board = {
-        pieces: [].map(buildPiece),
+        pieces: buildPieces([]),
         castle: { didMoveKing: true },
       }
       const ms = king({x:4,y:4},board)
@@ -224,7 +232,7 @@ describe('chess moves', function() {
 
     it('should not allow outside the board', function() {
       const board:Board = {
-        pieces: [].map(buildPiece),
+        pieces: buildPieces([]),
         castle: { didMoveKing: true },
       }
       const ms = king({x:7,y:2},board)
@@ -238,7 +246,7 @@ describe('chess moves', function() {
 
     it('should eat foes but be blocked by friends', function() {
       const board:Board = {
-        pieces: ['p:71','P:73'].map(buildPiece),
+        pieces: buildPieces(['p:71','P:73']),
         castle: { didMoveKing: true },
       }
       const ms = king({x:7,y:2},board)
@@ -251,7 +259,7 @@ describe('chess moves', function() {
 
     it('should not eat a guarded enemy by pawn', function() {
       const board:Board = {
-        pieces: ['p:55','p:46'].map(buildPiece),
+        pieces: buildPieces(['p:55','p:46']),
         castle: { didMoveKing: true },
       }
       const ms = king({x:6,y:4},board)
@@ -266,7 +274,7 @@ describe('chess moves', function() {
 
     it('should not eat guarded enemy by rook', function() {
       const board:Board = {
-        pieces: ['p:24','r:14'].map(buildPiece),
+        pieces: buildPieces(['p:24','r:14']),
         castle: { didMoveKing: true },
       }
       const ms = king({x:6,y:4},board)
@@ -281,7 +289,7 @@ describe('chess moves', function() {
 
     it('should be able to castle in long', function() {
       const board:Board = {
-        pieces: ['R:00','P:31','P:41','P:51','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:00','P:31','P:41','P:51','K:40']),
       }
       const ms = king({x:4,y:0},board)
 
@@ -293,7 +301,7 @@ describe('chess moves', function() {
 
     it('should not be able to castle in long if has moved the king', function() {
       const board:Board = {
-        pieces: ['R:00','P:31','P:41','P:51','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:00','P:31','P:41','P:51','K:40']),
         castle: { didMoveKing: true },
       }
       const ms = king({x:4,y:0},board)
@@ -305,7 +313,7 @@ describe('chess moves', function() {
 
     it('should not be able to castle in long if has moved the tower (long side)', function() {
       const board:Board = {
-        pieces: ['R:00','P:31','P:41','P:51','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:00','P:31','P:41','P:51','K:40']),
         castle: { didMoveLongTower: true },
       }
       const ms = king({x:4,y:0},board)
@@ -317,7 +325,7 @@ describe('chess moves', function() {
 
     it('should not be able to castle in long if blocked', function() {
       const board:Board = {
-        pieces: ['R:00','B:10','P:31','P:41','P:51','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:00','B:10','P:31','P:41','P:51','K:40']),
       }
       const ms = king({x:4,y:0},board)
 
@@ -328,7 +336,7 @@ describe('chess moves', function() {
 
     it('should not be able to castle in long if path is attacked (1)', function() {
       const board:Board = {
-        pieces: ['R:00','r:17','P:31','P:41','P:51','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:00','r:17','P:31','P:41','P:51','K:40']),
       }
       const ms = king({x:4,y:0},board)
 
@@ -339,7 +347,7 @@ describe('chess moves', function() {
 
     it('should not be able to castle in long if path is attacked (2)', function() {
       const board:Board = {
-        pieces: ['R:00','b:76','P:31','P:41','P:51','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:00','b:76','P:31','P:41','P:51','K:40']),
       }
       const ms = king({x:4,y:0},board)
 
@@ -347,10 +355,10 @@ describe('chess moves', function() {
         {x:3,y:0},{x:5,y:0},
       ])
     });
-////
+
     it('should be able to castle in short', function() {
       const board:Board = {
-        pieces: ['R:70','P:31','P:41','P:51','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:70','P:31','P:41','P:51','K:40']),
       }
       const ms = king({x:4,y:0},board)
 
@@ -362,7 +370,7 @@ describe('chess moves', function() {
 
     it('should not be able to castle in short if has moved the king', function() {
       const board:Board = {
-        pieces: ['R:70','P:31','P:41','P:51','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:70','P:31','P:41','P:51','K:40']),
         castle: { didMoveKing: true },
       }
       const ms = king({x:4,y:0},board)
@@ -374,7 +382,7 @@ describe('chess moves', function() {
 
     it('should not be able to castle in short if has moved the tower (short side)', function() {
       const board:Board = {
-        pieces: ['R:70','P:31','P:41','P:51','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:70','P:31','P:41','P:51','K:40']),
         castle: { didMoveShortTower: true },
       }
       const ms = king({x:4,y:0},board)
@@ -386,7 +394,7 @@ describe('chess moves', function() {
 
     it('should not be able to castle in short if blocked', function() {
       const board:Board = {
-        pieces: ['R:70','B:60','P:31','P:41','P:51','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:70','B:60','P:31','P:41','P:51','K:40']),
       }
       const ms = king({x:4,y:0},board)
 
@@ -397,7 +405,7 @@ describe('chess moves', function() {
 
     it('should not be able to castle in short if path is attacked (1)', function() {
       const board:Board = {
-        pieces: ['R:70','r:67','P:31','P:41','P:51','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:70','r:67','P:31','P:41','P:51','K:40']),
       }
       const ms = king({x:4,y:0},board)
 
@@ -408,7 +416,7 @@ describe('chess moves', function() {
 
     it('should not be able to castle in short if path is attacked (2)', function() {
       const board:Board = {
-        pieces: ['R:70','b:15','P:31','P:41','K:40'].map(buildPiece),
+        pieces: buildPieces(['R:70','b:15','P:31','P:41','K:40']),
       }
       const ms = king({x:4,y:0},board)
 
@@ -422,7 +430,7 @@ describe('chess moves', function() {
   describe('rook moves', function() {
     it('should have 14 moves', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: buildPieces([]),
       }
       const ms = rook({x:4,y:4},board)
 
@@ -437,7 +445,7 @@ describe('chess moves', function() {
 
     it('should be blocked by friends and exclude position', function() {
       const board:Board = {
-        pieces: ['P:46','P:54'].map(buildPiece)
+        pieces: buildPieces(['P:46','P:54']),
       }
       const ms = rook({x:4,y:4},board)
 
@@ -452,7 +460,7 @@ describe('chess moves', function() {
 
     it('should be blocked by enemies and include position', function() {
       const board:Board = {
-        pieces: ['p:46','p:54'].map(buildPiece)
+        pieces: buildPieces(['p:46','p:54']),
       }
       const ms = rook({x:4,y:4},board)
 
@@ -467,7 +475,7 @@ describe('chess moves', function() {
 
     it('should not move if is protecting the king', function() {
       const board:Board = {
-        pieces: ['b:00','K:55'].map(buildPiece)
+        pieces: buildPieces(['b:00','K:55']),
       }
       const ms = rook({x:4,y:4},board)
 
@@ -476,7 +484,7 @@ describe('chess moves', function() {
 
     it('should be able to eat to protect the king', function() {
       const board:Board = {
-        pieces: ['r:14','K:54'].map(buildPiece)
+        pieces: buildPieces(['r:14','K:54']),
       }
       const ms = rook({x:4,y:4},board)
 
@@ -489,7 +497,7 @@ describe('chess moves', function() {
   describe('bishop moves', function() {
     it('should have moves diag from corner', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: buildPieces([]),
       }
       const ms = bishop({x:0,y:0},board)
 
@@ -502,7 +510,7 @@ describe('chess moves', function() {
 
     it('should have moves diag from center', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: buildPieces([]),
       }
       const ms = bishop({x:4,y:4},board)
 
@@ -518,7 +526,7 @@ describe('chess moves', function() {
 
     it('should be blocked by friends and exclude position', function() {
       const board:Board = {
-        pieces: ['P:33','P:26'].map(buildPiece)
+        pieces: buildPieces(['P:33','P:26']),
       }
       const ms = bishop({x:4,y:4},board)
 
@@ -534,7 +542,7 @@ describe('chess moves', function() {
 
     it('should be blocked by enemies and include position', function() {
       const board:Board = {
-        pieces: ['p:33','p:26'].map(buildPiece)
+        pieces: buildPieces(['p:33','p:26']),
       }
       const ms = bishop({x:4,y:4},board)
 
@@ -550,7 +558,7 @@ describe('chess moves', function() {
 
     it('should not move if is protecting the king', function() {
       const board:Board = {
-        pieces: ['r:14','K:54'].map(buildPiece)
+        pieces: buildPieces(['r:14','K:54']),
       }
       const ms = bishop({x:4,y:4},board)
 
@@ -559,7 +567,7 @@ describe('chess moves', function() {
 
     it('should be able to eat to protect the king', function() {
       const board:Board = {
-        pieces: ['b:00','K:55'].map(buildPiece)
+        pieces: buildPieces(['b:00','K:55']),
       }
       const ms = bishop({x:4,y:4},board)
 
@@ -573,7 +581,7 @@ describe('chess moves', function() {
 
     it('should have bishop plus rook moves from center', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: buildPieces([]),
       }
       const pos = {x:4,y:4}
       const q_ms = queen(pos,board)
@@ -585,7 +593,7 @@ describe('chess moves', function() {
 
     it('should have bishop plus rook moves from corner', function() {
       const board:Board = {
-        pieces: [].map(buildPiece)
+        pieces: buildPieces([]),
       }
       const pos = {x:0,y:0}
       const q_ms = queen(pos,board)
@@ -597,7 +605,7 @@ describe('chess moves', function() {
 
     it('should be blocked by friends and exclude position', function() {
       const board:Board = {
-        pieces: ['P:33','P:26'].map(buildPiece)
+        pieces: buildPieces(['P:33','P:26']),
       }
       const pos = {x:4,y:4}
       const q_ms = queen(pos,board)
@@ -609,7 +617,7 @@ describe('chess moves', function() {
 
     it('should be blocked by enemies and include position', function() {
       const board:Board = {
-        pieces: ['p:33','p:26'].map(buildPiece)
+        pieces: buildPieces(['p:33','p:26']),
       }
       const ms = queen({x:4,y:4},board)
 
@@ -629,7 +637,7 @@ describe('regression test', function() {
 
   it('should not block pieces when king is covered', function() {
     const board:Board = {
-      pieces: ['r:14','P:34','K:54'].map(buildPiece)
+      pieces: buildPieces(['r:14','P:34','K:54']),
     }
     const ms = pawn({x:6,y:6},board)
 
@@ -638,7 +646,7 @@ describe('regression test', function() {
 
   it('should not check through king', function() {
     const board:Board = {
-      pieces: ['r:14','k:24','K:54'].map(buildPiece)
+      pieces: buildPieces(['r:14','k:24','K:54']),
     }
     const ms = pawn({x:3,y:4},board)
 

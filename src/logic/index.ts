@@ -37,20 +37,20 @@ const validAll = (...conds:D[]) => (pos:Piece, board: Board):IsMoveValid => {
 // for the pawn
 const validIfEnemy = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
   const [x,y] = move
-  const piece = board.pieces.find(p => p.x === pos.x+x && p.y === pos.y+y)
+  const piece = board.pieces[pos.x+x+(pos.y+y)*8]
   return piece && piece.foe ? [move,pos,board] : null
 }
 
 // for the bishop, rogue, queen
 const validIfEmpty = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
   const [x,y] = move
-  const piece = board.pieces.find(p => p.x === pos.x+x && p.y === pos.y+y)
+  const piece = board.pieces[pos.x+x+(pos.y+y)*8]
   return !piece ? [move,pos,board] : null
 }
 
 const validIfEmptyAndRank1 = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
   const [x,y] = move
-  const piece = board.pieces.find(p => p.x === pos.x+x && p.y === pos.y+y)
+  const piece = board.pieces[pos.x+x+(pos.y+y)*8]
   return !piece && pos.y === 1 ? [move,pos,board] : null
 }
 
@@ -58,20 +58,36 @@ const validIfEmptyAndRank1 = (move:Delta) => (pos:Piece, board: Board):IsMoveVal
 const validIfPassant = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
   const [x,y] = move
   if (board.passant !== pos.x+x) return null
-  const piece = board.pieces.find(p => p.x === pos.x+x && p.y === pos.y+y-1)
+  const piece = board.pieces[pos.x+x+(pos.y+y-1)*8]
   const isEnemy = piece && piece.foe
 
   return isEnemy ? [move,pos,board] : null
 }
 
+export const orderPieces = <T extends Pos>(pieces:T[]):T[] => {
+  const emptyBoard = Array(8*8);
+  pieces.forEach(p => {
+    if (p) emptyBoard[p.x+p.y*8] = p
+  })
+  return emptyBoard
+}
+
+const asEnemyPieces = <T extends Pos>(pieces:T[]):T[] => {
+  const emptyBoard = Array(8*8);
+  pieces.forEach(p => {
+    if (p) emptyBoard[p.x+p.y*8] = p
+  })
+  return emptyBoard
+}
+
 const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid => {
   const orig = piece
   const dest = {x:piece.x + move[0], y:piece.y + move[1]}
-  const king = piece.type == PieceType.King ? dest : board.pieces.find(p => !p.foe && p.type === PieceType.King)
+  const king = piece.type == PieceType.King ? dest : board.pieces.find(p => p && !p.foe && p.type === PieceType.King)
   if (!king) return [move,piece,board] // we are safe if there is no king in the board
 
   const enemyBoard:Board = {
-    pieces: [...board.pieces
+    pieces: orderPieces([...board.pieces
       .filter( e => (e.x !== orig.x || e.y !== orig.y) && (e.x !== dest.x || e.y !== dest.y))
       .map( p => ({
           x: p.x,
@@ -85,13 +101,13 @@ const validIfKingSafe = (move:Delta) => (piece:Piece, board: Board):IsMoveValid 
         type: piece.type,
         foe: true
       })
-    ],
+    ]),
     // FIXME: should it calculate passant?
   }
   const foes = enemyBoard.pieces.filter( p => !p.foe )
   const safe = !foes.find( foe => {
-    const attackOfFoe = threatsByType[foe.type](foe,enemyBoard)
-    const check = !!attackOfFoe.find( p => p.x === king.x && p.y === 7-king.y)
+    const attackOfFoe = orderPieces(threatsByType[foe.type](foe,enemyBoard))
+    const check = !!attackOfFoe[king.x+(7-king.y)*8]
     return check
   } )
 
@@ -103,10 +119,10 @@ const validIfShortCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid
   if (board.castle?.didMoveKing || board.castle?.didMoveShortTower) return null
 
   // pieces in place?
-  const king  = board.pieces.find(p => p.x === 4 && p.y === 0)
-  const path5 = board.pieces.find(p => p.x === 5 && p.y === 0)
-  const path6 = board.pieces.find(p => p.x === 6 && p.y === 0)
-  const tower = board.pieces.find(p => p.x === 7 && p.y === 0)
+  const king  = board.pieces[4+0*8]
+  const path5 = board.pieces[5+0*8]
+  const path6 = board.pieces[6+0*8]
+  const tower = board.pieces[7+0*8]
 
   if (!tower || tower.type != PieceType.Rook 
     || path5 || path6 
@@ -114,7 +130,7 @@ const validIfShortCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid
 
   // path is safe?
   const enemyBoard:Board = {
-    pieces: [...board.pieces
+    pieces: orderPieces([...board.pieces
       .map( p => ({
           x: p.x,
           y: 7-p.y,
@@ -122,14 +138,14 @@ const validIfShortCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid
           foe: !p.foe
         })
       )
-    ],
+    ]),
   }
   
   const foes = enemyBoard.pieces.filter( p => !p.foe )
   const pathSafe = !foes.find( foe => {
-    const attackOfFoe = threatsByType[foe.type](foe,enemyBoard)
-    const celd5 = !!attackOfFoe.find( p => p.x === 5 && p.y === 7)
-    const celd6 = !!attackOfFoe.find( p => p.x === 6 && p.y === 7)
+    const attackOfFoe = orderPieces(threatsByType[foe.type](foe,enemyBoard))
+    const celd5 = !!attackOfFoe[5+7*8]
+    const celd6 = !!attackOfFoe[6+7*8]
     return celd5 && celd6
   } )
 
@@ -138,18 +154,18 @@ const validIfShortCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid
 
 const validIfLongCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
   if (board.castle?.didMoveKing || board.castle?.didMoveLongTower) return null
-  const tower = board.pieces.find(p => p.x === 0 && p.y === 0)
-  const path1 = board.pieces.find(p => p.x === 1 && p.y === 0)
-  const path2 = board.pieces.find(p => p.x === 2 && p.y === 0)
-  const path3 = board.pieces.find(p => p.x === 3 && p.y === 0)
-  const king  = board.pieces.find(p => p.x === 4 && p.y === 0)
+  const tower = board.pieces[0+0*8]
+  const path1 = board.pieces[1+0*8]
+  const path2 = board.pieces[2+0*8]
+  const path3 = board.pieces[3+0*8]
+  const king  = board.pieces[4+0*8]
 
   if (!tower || tower.type != PieceType.Rook 
     || path1 || path2 || path3 
     || !king || king.type != PieceType.King) return null
   
   const enemyBoard:Board = {
-    pieces: [...board.pieces
+    pieces: orderPieces([...board.pieces
       .map( p => ({
           x: p.x,
           y: 7-p.y,
@@ -157,16 +173,16 @@ const validIfLongCastle = (move:Delta) => (pos:Piece, board: Board):IsMoveValid 
           foe: !p.foe
         })
       )
-    ],
+    ]),
   }
 
   const foes = enemyBoard.pieces.filter( p => !p.foe )
 
   const pathSafe = !foes.find( foe => {
-    const attackOfFoe = threatsByType[foe.type](foe,enemyBoard)
-    const celd1 = !!attackOfFoe.find( p => p.x === 1 && p.y === 7)
-    const celd2 = !!attackOfFoe.find( p => p.x === 2 && p.y === 7)
-    const celd3 = !!attackOfFoe.find( p => p.x === 3 && p.y === 7)
+    const attackOfFoe = orderPieces(threatsByType[foe.type](foe,enemyBoard))
+    const celd1 = !!attackOfFoe[1+7*8]
+    const celd2 = !!attackOfFoe[1+7*8]
+    const celd3 = !!attackOfFoe[1+7*8]
     return celd1 || celd2 || celd3
   } )
 
@@ -181,7 +197,7 @@ const validIfInside = (move:Delta) => (pos:Piece, board: Board):IsMoveValid => {
 
 const validIfNoFriend = (move:Delta) => (pos:Piece, board: Board):IsMoveValid =>  {
   const [x,y] = move
-  const piece = board.pieces.find(p => p.x === pos.x+x && p.y === pos.y+y)
+  const piece = board.pieces[pos.x+x+(pos.y+y)*8]
   const isFriend = piece && !piece.foe
   return !isFriend ? [move,pos,board] : null
 }

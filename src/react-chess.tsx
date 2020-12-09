@@ -2,7 +2,7 @@ import React, { CSSProperties, MouseEventHandler, SyntheticEvent, useReducer, us
 import defaultLineup from './defaultLineup';
 import pieceComponents from './pieces';
 import decode from './decode';
-import { swap, moves, Board, Piece, pieceTypeByName } from './logic'
+import { orderPieces, swap, moves, Board, Piece, pieceTypeByName } from './logic'
 
 export const getDefaultLineup = () => defaultLineup.slice()
 const noop = () => true;
@@ -159,13 +159,13 @@ interface DropAction {
 }
 type Action = MovingToAction | PickAction | DropAction;
 
-const translatePieces = (ps:string[], whiteTurn: boolean, exclude: string): Piece[] => ps
+const translatePieces = (ps:string[], whiteTurn: boolean, exclude: string): Piece[] => orderPieces(ps
 .map( name => name === exclude ? null : ({
   x: name.codePointAt(2) - 'a'.codePointAt(0),
   y: (y => whiteTurn ? y : 7-y)(name.codePointAt(3) - '1'.codePointAt(0)),
   foe: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()), 
   type: pieceTypeByName(name.charAt(0))
-})).filter(Boolean)
+})).filter(Boolean))
 
 const updateState = (state: State, action: Action):State => {
   switch (action.type) {
