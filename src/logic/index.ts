@@ -104,9 +104,10 @@ const validIfKingSafe = (move:DeltaPos) => (pos:Pos, type:PieceType, board: Boar
     type, foe: true
   }
   
-  const foes = enemyBoard.pieces.filter( p => p && !p.foe )
-  const safe = !foes.find( foe => {
-    const attackOfFoe = orderPieces(threatsByType[foe.type](foe,enemyBoard))
+  const safe = !enemyBoard.pieces.find( enemy => {
+    if (!enemy || enemy.foe) return false; //if no enemy or foe of the enemy
+
+    const attackOfFoe = orderPieces(threatsByType[enemy.type](enemy,enemyBoard))
     const check = !!attackOfFoe[king.x+(7-king.y)*8]
     return check
   } )
@@ -133,9 +134,9 @@ const validIfShortCastle = (move:DeltaPos) => (pos:Pos, type: PieceType, board: 
     pieces: asEnemyPieces(board.pieces),
   }
   
-  const foes = enemyBoard.pieces.filter( p => !p.foe )
-  const pathSafe = !foes.find( foe => {
-    const attackOfFoe = orderPieces(threatsByType[foe.type](foe,enemyBoard))
+  const pathSafe = !enemyBoard.pieces.find( enemy => {
+    if (!enemy || enemy.foe) return false; //if no enemy or foe of the enemy
+    const attackOfFoe = orderPieces(threatsByType[enemy.type](enemy,enemyBoard))
     const celd5 = !!attackOfFoe[5+7*8]
     const celd6 = !!attackOfFoe[6+7*8]
     return celd5 && celd6
@@ -160,10 +161,9 @@ const validIfLongCastle = (move:DeltaPos) => (pos:Pos, type: PieceType, board: B
     pieces: asEnemyPieces(board.pieces),
   }
 
-  const foes = enemyBoard.pieces.filter( p => !p.foe )
-
-  const pathSafe = !foes.find( foe => {
-    const attackOfFoe = orderPieces(threatsByType[foe.type](foe,enemyBoard))
+  const pathSafe = !enemyBoard.pieces.find( enemy => {
+    if (!enemy || enemy.foe) return false; //if no enemy or foe of the enemy
+    const attackOfFoe = orderPieces(threatsByType[enemy.type](enemy,enemyBoard))
     const celd1 = !!attackOfFoe[1+7*8]
     const celd2 = !!attackOfFoe[1+7*8]
     const celd3 = !!attackOfFoe[1+7*8]
