@@ -11,7 +11,7 @@ const obs = new PerformanceObserver((items) => {
 });
 obs.observe({ entryTypes: ['function'] }, true);
 
-const {orderPieces, pieceTypeByName, movesByType} = require('../dist/src/logic/index')
+const {orderPieces, pieceTypeByName, move} = require('../dist/src/logic/index')
 const lineUp = require('../dist/src/defaultLineup.jsx').default
 
 function translatePieces(ps, whiteTurn) {
@@ -42,7 +42,7 @@ function random() {
     return x - Math.floor(x);
 }
 
-let move = 0
+let moveNumber = 0
 
 function pepe(state) {
   const rnd = Math.floor(random() * state.count[state.whiteTurn])
@@ -62,7 +62,7 @@ function pepe(state) {
   // printState(board.pieces)
   const f = state.whiteTurn ? from : {...from,y:7-from.y}
 
-  const possible_moves = performance.timerify(movesByType[from.type])(f,board)
+  const possible_moves = performance.timerify(move)(f,board)
   if (possible_moves.length) {
     const rnd_move = Math.floor(random() * possible_moves.length)
     const pos = possible_moves[rnd_move]
@@ -96,8 +96,8 @@ function pepe(state) {
 
     if (state.whiteTurn) {
       console.log('')
-      move++
-      process.stdout.write(move+'.')
+      moveNumber++
+      process.stdout.write(moveNumber+'.')
     }
     process.stdout.write(`${' PNRBQK'[from.type]}${'abcdefgh'[from.x]}x${'abcdefgh'[dest.x]}${dest.y+1}${convert?'=Q':''} `)
     state.whiteTurn = !state.whiteTurn

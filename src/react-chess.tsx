@@ -2,7 +2,7 @@ import React, { CSSProperties, MouseEventHandler, SyntheticEvent, useReducer, us
 import defaultLineup from './defaultLineup';
 import pieceComponents from './pieces';
 import decode from './decode';
-import { orderPieces, swap, moves, Board, Piece, pieceTypeByName } from './logic'
+import { orderPieces, swap, move, Board, Piece, pieceTypeByName } from './logic'
 
 export const getDefaultLineup = () => defaultLineup.slice()
 const noop = () => true;
@@ -177,9 +177,8 @@ const updateState = (state: State, action: Action):State => {
         pieces: translatePieces(action.data.pieces, action.data.whiteTurn, action.data.draggingPiece.notation),
       }
 
-      const pieceStrategy = moves[action.data.draggingPiece.name.toLowerCase()]
       const pos = swap(action.data.dragFrom, !action.data.whiteTurn) // normal position
-      const validMoves = pieceStrategy(pos,board)
+      const validMoves = move(pos,board)
         .map(x => swap(x,!action.data.whiteTurn)) //translate back position
 
       return {...state, ...action.data, marks: validMoves }

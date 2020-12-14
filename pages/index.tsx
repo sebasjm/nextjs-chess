@@ -3,7 +3,7 @@ import React, { useEffect, useReducer, useState } from 'react';
 import Chess, { Dragging, getDefaultLineup } from '../src/react-chess'
 // import * as Ably from 'ably'
 // import axios from 'axios';
-import { orderPieces, Board, moves, Piece, pieceTypeByName, swap } from '../src/logic';
+import { orderPieces, Board, move, Piece, pieceTypeByName, swap } from '../src/logic';
 
 interface Props { }
 interface State {
@@ -56,10 +56,9 @@ function updateState(state: State, action: Action):State {
         passant: state.passant
       }
 
-      const pieceStrategy = moves[piece.name.toLowerCase()]
       const orig = swap(toXY(from), state.whiteTurn) 
       const dest = swap(toXY(to), state.whiteTurn) 
-      const validMoves = pieceStrategy(orig,board)
+      const validMoves = move(orig,board)
         .map(x => fromXY(swap(x,state.whiteTurn))) //translate back position
 
       if (!validMoves.find( m => m === to)) {
