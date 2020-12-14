@@ -164,7 +164,7 @@ const translatePieces = (ps:string[], whiteTurn: boolean, exclude: string): Piec
 .map( name => ({
   x: name.codePointAt(2) - 'a'.codePointAt(0),
   y: (y => whiteTurn ? y : 7-y)(name.codePointAt(3) - '1'.codePointAt(0)),
-  foe: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()), 
+  group: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()), 
   type: pieceTypeByName(name.charAt(0))
 })).filter(Boolean))
 

@@ -6,7 +6,7 @@ import 'mocha';
 const buildPiece = (name:string):Piece => ({
   x: name.codePointAt(2) - '0'.codePointAt(0),
   y: name.codePointAt(3) - '0'.codePointAt(0),
-  foe: name.charAt(0) === name.charAt(0).toLocaleLowerCase(),
+  group: name.charAt(0) === name.charAt(0).toLocaleLowerCase(),
   type: pieceTypeByName(name.charAt(0))
 })
 

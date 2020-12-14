@@ -18,7 +18,7 @@ function translatePieces(ps, whiteTurn) {
   return orderPieces(ps.map(name => ({
     x: name.codePointAt(2) - 'a'.codePointAt(0),
     y: (y => whiteTurn ? y : 7 - y)(name.codePointAt(3) - '1'.codePointAt(0)),
-    foe: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()),
+    group: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()),
     type: pieceTypeByName(name.charAt(0))
   })).filter(Boolean))
 }
@@ -30,7 +30,7 @@ function invertBoard(__pieces) {
       x: p.x,
       y: 7 - p.y,
       type: p.type,
-      foe: !p.foe
+      group: !p.group
     }
   })
   return emptyBoard
@@ -49,7 +49,7 @@ function pepe(state) {
   let i = rnd
   const from = state.pieces.find(l => {
     if (!l) return false
-    if (state.whiteTurn ? !!l.foe : !l.foe) return false
+    if (state.whiteTurn ? !!l.group : !l.group) return false
     if (!i) return l
     i--
   })

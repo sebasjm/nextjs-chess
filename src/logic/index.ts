@@ -58,7 +58,7 @@ function validIfEnemy(move: DeltaPos) {
   return function applyValidIfEnemy(orig: Piece, board: Board): IsMoveValid {
     const dest = add(orig, move)
     const piece = board.pieces[dest.x + dest.y * 8]
-    return piece && piece.foe ? dest : null
+    return piece && piece.group ? dest : null
   }
 }
 
@@ -84,7 +84,7 @@ function validIfPassant(move: DeltaPos) {
     const dest = add(orig, move)
     if (board.passant !== dest.x) return null
     const piece = board.pieces[dest.x + (dest.y - 1) * 8]
-    const isEnemy = piece && piece.foe
+    const isEnemy = piece && piece.group
 
     return isEnemy ? dest : null
   }
@@ -97,7 +97,7 @@ function asEnemyPieces(pieces: Piece[]): Piece[] {
       x: p.x,
       y: 7 - p.y,
       type: p.type,
-      foe: !p.foe
+      group: !p.group
     }
   })
   return emptyBoard
@@ -136,7 +136,7 @@ function threatZone(board: Board): boolean[] {
 
   const result = Array(8 * 8)
   enemyBoard.pieces.forEach(function updateDangerous(enemy) {
-    if (!enemy || enemy.foe) return false; //if no enemy or foe of the enemy
+    if (!enemy || enemy.group) return false; //if no enemy or group of the enemy
     threatsByType[enemy.type](enemy, enemyBoard).forEach(function mark(attack) {
       result[attack.x + (7 - attack.y) * 8] = true
     })
@@ -150,7 +150,7 @@ function threatZone(board: Board): boolean[] {
 function validIfKingSafe(move: DeltaPos) {
   return function applyValidIfKingSafe(orig: Piece, board: Board): IsMoveValid {
     const dest = add(orig, move)
-    const king = orig.type == PieceType.King ? dest : board.pieces.find(p => p && !p.foe && p.type === PieceType.King)
+    const king = orig.type == PieceType.King ? dest : board.pieces.find(p => p && !p.group && p.type === PieceType.King)
     if (!king) return dest // we are safe if there is no king in the board
 
     const nextBoard = {
@@ -223,13 +223,13 @@ function validIfNoFriend(move: DeltaPos) {
   return function applyValidIfNoFriend(orig: Piece, board: Board): IsMoveValid {
     const dest = add(orig, move)
     const piece = board.pieces[dest.x + dest.y * 8]
-    const isFriend = piece && !piece.foe
+    const isFriend = piece && !piece.group
     return !isFriend ? dest : null
   }
 }
 
 function add(p: Piece, move: DeltaPos) {
-  return ({ x: p.x + move.x, y: p.y + move.y, type: p.type, foe: p.foe })
+  return ({ x: p.x + move.x, y: p.y + move.y, type: p.type, group: p.group })
 }
 
 type IsMoveValid = Pos | null
@@ -249,12 +249,12 @@ export enum PieceType {
 export interface Piece {
   x: number,
   y: number,
-  foe?: boolean,
+  group?: boolean,
   type: PieceType
 }
 export interface Board {
   pieces: Piece[];// pieces on board
-  passant?: number; //did foe an en'passant on last move?
+  passant?: number; //did group an en'passant on last move?
   castle?: {
     didMoveKing?: boolean; //is still posible to castle?
     didMoveShortTower?: boolean; //is still posible to castle?
@@ -457,13 +457,13 @@ export const pieceTypeByName = (str: string) => {
 
 // function ugly_and_naive_hashing1(board: Board) {
 //   const b = `${board?.passant}${board?.castle?.didMoveKing}${board?.castle?.didMoveLongTower}${board?.castle?.didMoveShortTower}|`
-//   const ps = board.pieces.map(p => !p ? '.' : `${p.x}${p.y}${p.type}${p.foe}`)
+//   const ps = board.pieces.map(p => !p ? '.' : `${p.x}${p.y}${p.type}${p.group}`)
 //   return b + ps
 // }
 
 // function ugly_and_naive_hashing2(pos: Pos, board: Board) {
 //   const b = `${pos.x}${pos.y}|${board?.passant}${board?.castle?.didMoveKing}${board?.castle?.didMoveLongTower}${board?.castle?.didMoveShortTower}|`
-//   const ps = board.pieces.map(p => !p ? '.' : `${p.x}${p.y}${p.type}${p.foe}`)
+//   const ps = board.pieces.map(p => !p ? '.' : `${p.x}${p.y}${p.type}${p.group}`)
 //   return b + ps
 // }
 
