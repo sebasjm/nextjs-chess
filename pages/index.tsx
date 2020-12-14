@@ -30,7 +30,7 @@ const handler = { client: null }
 function translatePieces(ps:string[], whiteTurn: boolean): Piece[] { return orderPieces(ps.map( name => ({
   x: name.codePointAt(2) - 'a'.codePointAt(0),
   y: (y => whiteTurn ? y : 7-y)(name.codePointAt(3) - '1'.codePointAt(0)),
-  group: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()), 
+  group: (whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase())?2:3), 
   type: pieceTypeByName(name.charAt(0))
 })).filter(Boolean))
 }

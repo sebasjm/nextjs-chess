@@ -58,7 +58,7 @@ function validIfEnemy(move: DeltaPos) {
   return function applyValidIfEnemy(orig: Piece, board: Board): IsMoveValid {
     const dest = add(orig, move)
     const piece = board.pieces[dest.x + dest.y * 8]
-    return piece && piece.group ? dest : null
+    return piece && (piece.group !== orig.group) ? dest : null
   }
 }
 
@@ -84,7 +84,7 @@ function validIfPassant(move: DeltaPos) {
     const dest = add(orig, move)
     if (board.passant !== dest.x) return null
     const piece = board.pieces[dest.x + (dest.y - 1) * 8]
-    const isEnemy = piece && piece.group
+    const isEnemy = piece && (piece.group !== orig.group)
 
     return isEnemy ? dest : null
   }
@@ -97,7 +97,7 @@ function asEnemyPieces(pieces: Piece[]): Piece[] {
       x: p.x,
       y: 7 - p.y,
       type: p.type,
-      group: !p.group
+      group: p.group
     }
   })
   return emptyBoard
@@ -116,29 +116,30 @@ function printState(pieces:Piece[]) {
   console.log(result)
 }
 
-function printThreat(attacked:boolean[]) {
+function printThreat(attacked:number[]) {
   let result = ''
   for(let j = 0; j < 64; j++) {
     const x = j%8
     const y = Math.floor(j/8)
     const i = x + (7-y) * 8
     const c = attacked[i]
-    result += (c?'x':' ')+((i+1)%8?'':` ${Math.floor(i/8)+1}\n`)
+    result += (c?c:' ')+((i+1)%8?'':` ${Math.floor(i/8)+1}\n`)
   }
   result += '\nabcdefgh'
   console.log(result)
 }
 
-function threatZone(board: Board): boolean[] {
+function threatZone(board: Board): number[] {
   const enemyBoard: Board = {
     pieces: asEnemyPieces(board.pieces),
   }
 
-  const result = Array(8 * 8)
+  const result = Array<number>(8 * 8)
+  result.fill(0)
   enemyBoard.pieces.forEach(function updateDangerous(enemy) {
-    if (!enemy || enemy.group) return false; //if no enemy or group of the enemy
+    if (!enemy) return false; //if no enemy or group of the enemy
     threatsByType[enemy.type](enemy, enemyBoard).forEach(function mark(attack) {
-      result[attack.x + (7 - attack.y) * 8] = true
+      result[attack.x + (7 - attack.y) * 8] += first20Primes[enemy.group]
     })
   })
 
@@ -150,7 +151,7 @@ function threatZone(board: Board): boolean[] {
 function validIfKingSafe(move: DeltaPos) {
   return function applyValidIfKingSafe(orig: Piece, board: Board): IsMoveValid {
     const dest = add(orig, move)
-    const king = orig.type == PieceType.King ? dest : board.pieces.find(p => p && !p.group && p.type === PieceType.King)
+    const king = orig.type == PieceType.King ? dest : board.pieces.find(p => p && (p.group === dest.group) && p.type === PieceType.King)
     if (!king) return dest // we are safe if there is no king in the board
 
     const nextBoard = {
@@ -161,7 +162,7 @@ function validIfKingSafe(move: DeltaPos) {
 
     const attacked = threatZone(nextBoard);
     // const attacked = cacheBoard(ugly_and_naive_hashing1, threatZone, nextBoard);
-    const safe = !attacked[king.x + king.y * 8]
+    const safe = (attacked[king.x + king.y * 8] % first20Primes[king.group]) == 0
 
     return safe ? dest : null
   }
@@ -184,7 +185,8 @@ function validIfShortCastle(move: DeltaPos) {
     // path is safe?
     const attacked = threatZone(board);
     // const attacked = cacheBoard(ugly_and_naive_hashing1, threatZone, board);
-    const pathSafe = !attacked[5 + 0 * 8] && !attacked[6 + 0 * 8]
+    const pathSafe = (attacked[5 + 0 * 8] % first20Primes[king.group]) == 0 
+      && (attacked[6 + 0 * 8]% first20Primes[king.group]) == 0
 
     return pathSafe ? add(orig, move) : null
   }
@@ -205,7 +207,9 @@ function validIfLongCastle(move: DeltaPos) {
 
     const attacked = threatZone(board);
     // const attacked = cacheBoard(ugly_and_naive_hashing1, threatZone, board);
-    const pathSafe = !attacked[1 + 0 * 8] && !attacked[2 + 0 * 8] && !attacked[3 + 0 * 8]
+    const pathSafe = (attacked[1 + 0 * 8] % first20Primes[king.group]) == 0 
+      && (attacked[2 + 0 * 8] % first20Primes[king.group]) == 0 
+      && (attacked[3 + 0 * 8] % first20Primes[king.group]) == 0
 
     return pathSafe ? add(orig, move) : null
   }
@@ -223,7 +227,7 @@ function validIfNoFriend(move: DeltaPos) {
   return function applyValidIfNoFriend(orig: Piece, board: Board): IsMoveValid {
     const dest = add(orig, move)
     const piece = board.pieces[dest.x + dest.y * 8]
-    const isFriend = piece && !piece.group
+    const isFriend = piece && (piece.group === dest.group)
     return !isFriend ? dest : null
   }
 }
@@ -246,10 +250,12 @@ export enum PieceType {
   Pawn = 1, Knigth, Rook, Bishop, Queen, King
 }
 
+const first20Primes = [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71]
+
 export interface Piece {
   x: number,
   y: number,
-  group?: boolean,
+  group: number,
   type: PieceType
 }
 export interface Board {

@@ -6,7 +6,7 @@ import 'mocha';
 const buildPiece = (name:string):Piece => ({
   x: name.codePointAt(2) - '0'.codePointAt(0),
   y: name.codePointAt(3) - '0'.codePointAt(0),
-  group: name.charAt(0) === name.charAt(0).toLocaleLowerCase(),
+  group: (name.charAt(0) === name.charAt(0).toLocaleLowerCase()?2:3),
   type: pieceTypeByName(name.charAt(0))
 })
 
@@ -36,7 +36,7 @@ describe('chess moves', function() {
 
     it('should have one move when alone', function() {
       const board:Board = {
-        pieces: buildPieces(['p:32']),
+        pieces: buildPieces(['P:32']),
       }
       const ms = move({x:3,y:2},board)
 
@@ -57,7 +57,7 @@ describe('chess moves', function() {
 
     it('should be blocked with an enemy in front', function() {
       const board:Board = {
-        pieces: buildPieces(['q:33','p:32']),
+        pieces: buildPieces(['q:33','P:32']),
       }
 
       const ms = move({x:3,y:2},board)
@@ -67,7 +67,7 @@ describe('chess moves', function() {
 
     it('should be blocked the passant move with an enemy in front', function() {
       const board:Board = {
-        pieces: buildPieces(['q:12','p:11']),
+        pieces: buildPieces(['q:12','P:11']),
       }
       
       const ms = move({x:1,y:1},board)
@@ -77,7 +77,7 @@ describe('chess moves', function() {
 
     it('should still valid to eat with a block in front', function() {
       const board:Board = {
-        pieces: buildPieces(['q:12','q:22','p:11']),
+        pieces: buildPieces(['q:12','q:22','P:11']),
       }
       const ms = move({x:1,y:1},board)
 
@@ -86,7 +86,7 @@ describe('chess moves', function() {
 
     it('should be able to eat after enemy did passant', function() {
       const board:Board = {
-        pieces: buildPieces(['p:55','p:45']),
+        pieces: buildPieces(['p:55','P:45']),
         passant: 5    
       }
       const ms = move({x:4,y:5},board)
@@ -98,7 +98,7 @@ describe('chess moves', function() {
 
     it('should not eat if enemy did passant but is far', function() {
       const board:Board = {
-        pieces: buildPieces(['p:55','p:15','p:45']),
+        pieces: buildPieces(['p:55','p:15','P:45']),
         passant: 1
       }
       const ms = move({x:4,y:5},board)
@@ -110,7 +110,7 @@ describe('chess moves', function() {
 
     it('should not eat if enemy did not passant', function() {
       const board:Board = {
-        pieces: buildPieces(['p:55','p:15','p:45']),
+        pieces: buildPieces(['p:55','p:15','P:45']),
       }
       const ms = move({x:4,y:5},board)
 
@@ -119,18 +119,9 @@ describe('chess moves', function() {
       ])
     });
 
-    it('should still valid to eat with a block in front', function() {
-      const board:Board = {
-        pieces: buildPieces(['q:12','q:22','p:11']),
-      }
-      const ms = move({x:1,y:1},board)
-
-      expect(ms.map(justPosition)).to.have.deep.members([{x:2,y:2}])
-    });
-
     it('should not go outside the board', function() {
       const board:Board = {
-        pieces: buildPieces(['p:77']),
+        pieces: buildPieces(['P:77']),
       }
       const ms = move({x:7,y:7},board)
 
@@ -139,7 +130,7 @@ describe('chess moves', function() {
 
     it('should not move if is protecting the king', function() {
       const board:Board = {
-        pieces: buildPieces(['r:14','K:54','p:44']),
+        pieces: buildPieces(['r:14','K:54','P:44']),
       }
       const ms = move({x:4,y:4},board)
 
@@ -151,7 +142,7 @@ describe('chess moves', function() {
   describe('knigth moves', function() {
     it('should have eigth moves', function() {
       const board:Board = {
-        pieces: buildPieces(['n:44']),
+        pieces: buildPieces(['N:44']),
       }
       const ms = move({x:4,y:4},board)
 
@@ -164,7 +155,7 @@ describe('chess moves', function() {
     });
     it('should not allow outside the board', function() {
       const board:Board = {
-        pieces: buildPieces(['n:72']),
+        pieces: buildPieces(['N:72']),
       }
       const ms = move({x:7,y:2},board)
 
@@ -176,7 +167,7 @@ describe('chess moves', function() {
 
     it('should not fall into a friend', function() {
       const board:Board = {
-        pieces: buildPieces(['P:60','n:72']),
+        pieces: buildPieces(['P:60','N:72']),
       }
       const ms = move({x:7,y:2},board)
 
@@ -188,7 +179,7 @@ describe('chess moves', function() {
 
     it('should not be blocked and eat', function() {
       const board:Board = {
-        pieces: buildPieces(['p:60','P:71','P:61','P:51','n:72']),
+        pieces: buildPieces(['p:60','P:71','P:61','P:51','N:72']),
       }
       const ms = move({x:7,y:2},board)
 
@@ -200,7 +191,7 @@ describe('chess moves', function() {
 
     it('should not move if is protecting the king', function() {
       const board:Board = {
-        pieces: buildPieces(['r:14','K:54','n:44']),
+        pieces: buildPieces(['r:14','K:54','N:44']),
       }
       const ms = move({x:4,y:4},board)
 
@@ -212,7 +203,7 @@ describe('chess moves', function() {
   describe('king moves', function() {
     it('should have eigth moves', function() {
       const board:Board = {
-        pieces: buildPieces(['k:44']),
+        pieces: buildPieces(['K:44']),
         castle: { didMoveKing: true },
       }
       const ms = move({x:4,y:4},board)
@@ -227,7 +218,7 @@ describe('chess moves', function() {
 
     it('should not allow outside the board', function() {
       const board:Board = {
-        pieces: buildPieces(['k:72']),
+        pieces: buildPieces(['K:72']),
         castle: { didMoveKing: true },
       }
       const ms = move({x:7,y:2},board)
@@ -241,7 +232,7 @@ describe('chess moves', function() {
 
     it('should eat foes but be blocked by friends', function() {
       const board:Board = {
-        pieces: buildPieces(['p:71','P:73','k:72']),
+        pieces: buildPieces(['p:71','P:73','K:72']),
         castle: { didMoveKing: true },
       }
       const ms = move({x:7,y:2},board)
@@ -254,7 +245,7 @@ describe('chess moves', function() {
 
     it('should not eat a guarded enemy by pawn', function() {
       const board:Board = {
-        pieces: buildPieces(['P:55','P:46','k:64']),
+        pieces: buildPieces(['P:55','P:46','K:64']),
         castle: { didMoveKing: true },
       }
       const ms = move({x:6,y:4},board)
@@ -269,7 +260,7 @@ describe('chess moves', function() {
 
     it('should not eat guarded enemy by rook', function() {
       const board:Board = {
-        pieces: buildPieces(['p:24','r:14','k:64']),
+        pieces: buildPieces(['p:24','r:14','K:64']),
         castle: { didMoveKing: true },
       }
       const ms = move({x:6,y:4},board)
@@ -425,7 +416,7 @@ describe('chess moves', function() {
   describe('rook moves', function() {
     it('should have 14 moves', function() {
       const board:Board = {
-        pieces: buildPieces(['r:44']),
+        pieces: buildPieces(['R:44']),
       }
       const ms = move({x:4,y:4},board)
 
@@ -440,7 +431,7 @@ describe('chess moves', function() {
 
     it('should be blocked by friends and exclude position', function() {
       const board:Board = {
-        pieces: buildPieces(['P:46','P:54','r:44']),
+        pieces: buildPieces(['P:46','P:54','R:44']),
       }
       const ms = move({x:4,y:4},board)
 
@@ -455,7 +446,7 @@ describe('chess moves', function() {
 
     it('should be blocked by enemies and include position', function() {
       const board:Board = {
-        pieces: buildPieces(['p:46','p:54','r:44']),
+        pieces: buildPieces(['p:46','p:54','R:44']),
       }
       const ms = move({x:4,y:4},board)
 
@@ -470,7 +461,7 @@ describe('chess moves', function() {
 
     it('should not move if is protecting the king', function() {
       const board:Board = {
-        pieces: buildPieces(['b:00','K:55','r:44']),
+        pieces: buildPieces(['b:00','K:55','R:44']),
       }
       const ms = move({x:4,y:4},board)
 
@@ -492,7 +483,7 @@ describe('chess moves', function() {
   describe('bishop moves', function() {
     it('should have moves diag from corner', function() {
       const board:Board = {
-        pieces: buildPieces(['b:00']),
+        pieces: buildPieces(['B:00']),
       }
       const ms = move({x:0,y:0},board)
 
@@ -505,7 +496,7 @@ describe('chess moves', function() {
 
     it('should have moves diag from center', function() {
       const board:Board = {
-        pieces: buildPieces(['b:44']),
+        pieces: buildPieces(['B:44']),
       }
       const ms = move({x:4,y:4},board)
 
@@ -521,7 +512,7 @@ describe('chess moves', function() {
 
     it('should be blocked by friends and exclude position', function() {
       const board:Board = {
-        pieces: buildPieces(['P:33','P:26','b:44']),
+        pieces: buildPieces(['P:33','P:26','B:44']),
       }
       const ms = move({x:4,y:4},board)
 
@@ -537,7 +528,7 @@ describe('chess moves', function() {
 
     it('should be blocked by enemies and include position', function() {
       const board:Board = {
-        pieces: buildPieces(['p:33','p:26','b:44']),
+        pieces: buildPieces(['p:33','p:26','B:44']),
       }
       const ms = move({x:4,y:4},board)
 
@@ -665,12 +656,12 @@ describe('regression test', function() {
 
   it('should be able to block a pawn', function() {
     const board:Board = {
-      pieces: buildPieces(['p:14','r:75','r:07','r:27','K:14']),
+      pieces: buildPieces(['P:13','R:76','R:07','R:27','k:15']),
     }
-    const ms = move({x:1,y:4},board)
+    const ms = move({x:1,y:5},board)
 
     expect(ms.map(justPosition)).to.have.deep.members([
-      {x:1,y:3}
+      {x:1,y:4}
     ])
   });
 })

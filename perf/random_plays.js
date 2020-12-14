@@ -14,11 +14,11 @@ obs.observe({ entryTypes: ['function'] }, true);
 const {orderPieces, pieceTypeByName, move} = require('../dist/src/logic/index')
 const lineUp = require('../dist/src/defaultLineup.jsx').default
 
-function translatePieces(ps, whiteTurn) {
+function translatePieces(ps) {
   return orderPieces(ps.map(name => ({
     x: name.codePointAt(2) - 'a'.codePointAt(0),
-    y: (y => whiteTurn ? y : 7 - y)(name.codePointAt(3) - '1'.codePointAt(0)),
-    group: whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase()),
+    y: name.codePointAt(3) - '1'.codePointAt(0),
+    group: (name.charAt(0) === name.charAt(0).toLocaleLowerCase()) ? 2 : 3,
     type: pieceTypeByName(name.charAt(0))
   })).filter(Boolean))
 }
@@ -30,7 +30,7 @@ function invertBoard(__pieces) {
       x: p.x,
       y: 7 - p.y,
       type: p.type,
-      group: !p.group
+      group: p.group
     }
   })
   return emptyBoard
@@ -45,32 +45,32 @@ function random() {
 let moveNumber = 0
 
 function pepe(state) {
-  const rnd = Math.floor(random() * state.count[state.whiteTurn])
+  const rnd = Math.floor(random() * state.count[state.turn])
   let i = rnd
   const from = state.pieces.find(l => {
     if (!l) return false
-    if (state.whiteTurn ? !!l.group : !l.group) return false
+    if (state.turn === l.group) return false
     if (!i) return l
     i--
   })
   // console.log("elegido", from)
   const from_idx = from.x + from.y * 8 
   
-  const board = state.whiteTurn ? {pieces:state.pieces} : {pieces: invertBoard(state.pieces)};
-  board.castle = state.castle[state.whiteTurn]
+  const board = state.turn === 2 ? {pieces:state.pieces} : {pieces: invertBoard(state.pieces)};
+  board.castle = state.castle[state.turn]
   board.passant = state.passant
   // printState(board.pieces)
-  const f = state.whiteTurn ? from : {...from,y:7-from.y}
+  const f = state.turn === 2 ? from : {...from,y:7-from.y}
 
   const possible_moves = performance.timerify(move)(f,board)
   if (possible_moves.length) {
     const rnd_move = Math.floor(random() * possible_moves.length)
     const pos = possible_moves[rnd_move]
-    const dest = state.whiteTurn ? pos : {...pos,y:7-pos.y}
+    const dest = state.turn === 2 ? pos : {...pos,y:7-pos.y}
     // console.log("movimiento", dest)
     const dest_idx = dest.x + dest.y * 8 
   
-    if (state.pieces[dest_idx]) state.count[!state.whiteTurn]-- //is eating
+    if (state.pieces[dest_idx]) state.count[state.turn === 2 ? 3 : 2]-- //is eating
     const fi = state.pieces[from_idx]
     state.pieces[dest_idx] = {...fi, x: dest.x, y:dest.y}
     state.pieces[from_idx] = null
@@ -85,22 +85,22 @@ function pepe(state) {
       state.pieces[dest_idx].type = 5
     }
     if (from.type === 6) {
-      state.castle[state.whiteTurn].didMoveKing = true
+      state.castle[state.turn].didMoveKing = true
     }
     if (from.type === 3 && from.x === 7) {
-      state.castle[state.whiteTurn].didMoveShortTower = true
+      state.castle[state.turn].didMoveShortTower = true
     }
     if (from.type === 3 && from.x === 0) {
-      state.castle[state.whiteTurn].didMoveLongTower = true
+      state.castle[state.turn].didMoveLongTower = true
     }
 
-    if (state.whiteTurn) {
+    if (state.turn === 2 ) {
       console.log('')
       moveNumber++
       process.stdout.write(moveNumber+'.')
     }
     process.stdout.write(`${' PNRBQK'[from.type]}${'abcdefgh'[from.x]}x${'abcdefgh'[dest.x]}${dest.y+1}${convert?'=Q':''} `)
-    state.whiteTurn = !state.whiteTurn
+    state.turn = state.turn === 2 ? 3 : 2
   }
 }
 
@@ -117,20 +117,19 @@ function printState(pieces) {
   console.log(result)
 }
 
-let _whiteTurn = true
-const _pieces = translatePieces(lineUp, _whiteTurn)
+const _pieces = translatePieces(lineUp)
 let _count = {
-  [true]  : 16,
-  [false] : 16,
+  [2] : 16,
+  [3] : 16,
 }
 
 const state = {
   count:_count, 
   pieces:_pieces, 
-  whiteTurn:_whiteTurn,
+  turn: 2,
   castle: {
-    [true]: {},
-    [false]: {},
+    [2]: {},
+    [3]: {},
   },
   passant: false
 }
