@@ -36,7 +36,7 @@ function invertBoard(__pieces) {
   return emptyBoard
 }
 
-var seed = 4;
+var seed = 1;
 function random() {
     var x = Math.sin(seed++) * 10000;
     return x - Math.floor(x);
@@ -95,11 +95,11 @@ function pepe(state) {
     }
 
     if (state.whiteTurn) {
-      // console.log('')
+      console.log('')
       move++
-      // process.stdout.write(move+'.')
+      process.stdout.write(move+'.')
     }
-    // process.stdout.write(`${' PNRBQK'[from.type]}${'abcdefgh'[from.x]}x${'abcdefgh'[dest.x]}${dest.y+1}${convert?'=Q':''} `)
+    process.stdout.write(`${' PNRBQK'[from.type]}${'abcdefgh'[from.x]}x${'abcdefgh'[dest.x]}${dest.y+1}${convert?'=Q':''} `)
     state.whiteTurn = !state.whiteTurn
   }
 }
