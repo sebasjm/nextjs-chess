@@ -652,4 +652,15 @@ describe('regression test', function() {
 
     expect(ms).to.have.deep.members([{x:3,y:5}])
   });
+
+  it('should be able to block a pawn', function() {
+    const board:Board = {
+      pieces: buildPieces(['p:14','r:75','r:07','r:27']),
+    }
+    const ms = king({x:1,y:4},board)
+
+    expect(ms).to.have.deep.members([
+      {x:1,y:3}
+    ])
+  });
 })

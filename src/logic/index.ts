@@ -90,14 +90,6 @@ function validIfPassant(move: DeltaPos) {
   }
 }
 
-export function orderPieces<T extends Pos>(pieces: T[]): T[] {
-  const emptyBoard = Array(8 * 8);
-  pieces.forEach(function setBoardIfPresent(p) {
-    if (p) emptyBoard[p.x + p.y * 8] = p
-  })
-  return emptyBoard
-}
-
 function asEnemyPieces(pieces: Piece[]): Piece[] {
   const emptyBoard = Array(8 * 8);
   pieces.forEach(function setEnemyBoardIfPresent(p) {
@@ -111,6 +103,21 @@ function asEnemyPieces(pieces: Piece[]): Piece[] {
   return emptyBoard
 }
 
+function threatZone(board: Board): boolean[] {
+  const enemyBoard: Board = {
+    pieces: asEnemyPieces(board.pieces),
+  }
+
+  const result = Array(8 * 8)
+  enemyBoard.pieces.forEach(function updateDangerous(enemy) {
+    if (!enemy || enemy.foe) return false; //if no enemy or foe of the enemy
+    threatsByType[enemy.type](enemy, enemyBoard).forEach(function mark(attack) {
+      result[attack.x + (7 - attack.y) * 8] = true
+    })
+  })
+  return result
+}
+
 function validIfKingSafe(move: DeltaPos) {
   return function applyValidIfKingSafe(pos: Pos, type: PieceType, board: Board): IsMoveValid {
     const orig = pos
@@ -118,24 +125,15 @@ function validIfKingSafe(move: DeltaPos) {
     const king = type == PieceType.King ? dest : board.pieces.find(p => p && !p.foe && p.type === PieceType.King)
     if (!king) return dest // we are safe if there is no king in the board
 
-    const enemyBoard: Board = {
-      pieces: asEnemyPieces(board.pieces),
+    const nextBoard = {
+      pieces: Array.from(board.pieces)
     }
-    enemyBoard.pieces[orig.x + (7 - orig.y) * 8] = null
-    enemyBoard.pieces[dest.x + (7 - dest.y) * 8] = {
-      x: dest.x,
-      y: 7 - dest.y,
-      type, foe: true
-    }
+    nextBoard.pieces[orig.x + orig.y * 8] = null
+    nextBoard.pieces[dest.x + dest.y * 8] = { ...dest, type }
 
-    function isEnemyAttackingTheKing(enemy) {
-      if (!enemy || enemy.foe) return false; //if no enemy or foe of the enemy
-
-      const attackOfFoe = orderPieces(threatsByType[enemy.type](enemy, enemyBoard))
-      const check = !!attackOfFoe[king.x + (7 - king.y) * 8]
-      return check
-    }
-    const safe = !enemyBoard.pieces.find(isEnemyAttackingTheKing)
+    const attacked = threatZone(nextBoard);
+    // const attacked = cacheBoard(ugly_and_naive_hashing1, threatZone, nextBoard);
+    const safe = !attacked[king.x + king.y * 8]
 
     return safe ? dest : null
   }
@@ -156,18 +154,9 @@ function validIfShortCastle(move: DeltaPos) {
       || !king || king.type != PieceType.King) return null
 
     // path is safe?
-    const enemyBoard: Board = {
-      pieces: asEnemyPieces(board.pieces),
-    }
-
-    function isEnemyAttackingThePath(enemy) {
-      if (!enemy || enemy.foe) return false; //if no enemy or foe of the enemy
-      const attackOfFoe = orderPieces(threatsByType[enemy.type](enemy, enemyBoard))
-      const celd5 = !!attackOfFoe[5 + 7 * 8]
-      const celd6 = !!attackOfFoe[6 + 7 * 8]
-      return celd5 && celd6
-    }
-    const pathSafe = !enemyBoard.pieces.find(isEnemyAttackingThePath)
+    const attacked = threatZone(board);
+    // const attacked = cacheBoard(ugly_and_naive_hashing1, threatZone, board);
+    const pathSafe = !attacked[5 + 0 * 8] && !attacked[6 + 0 * 8]
 
     return pathSafe ? add(pos, move) : null
   }
@@ -186,19 +175,9 @@ function validIfLongCastle(move: DeltaPos) {
       || path1 || path2 || path3
       || !king || king.type != PieceType.King) return null
 
-    const enemyBoard: Board = {
-      pieces: asEnemyPieces(board.pieces),
-    }
-
-    function isEnemyAttackingThePath(enemy) {
-      if (!enemy || enemy.foe) return false; //if no enemy or foe of the enemy
-      const attackOfFoe = orderPieces(threatsByType[enemy.type](enemy, enemyBoard))
-      const celd1 = !!attackOfFoe[1 + 7 * 8]
-      const celd2 = !!attackOfFoe[1 + 7 * 8]
-      const celd3 = !!attackOfFoe[1 + 7 * 8]
-      return celd1 || celd2 || celd3
-    }
-    const pathSafe = !enemyBoard.pieces.find(isEnemyAttackingThePath)
+    const attacked = threatZone(board);
+    // const attacked = cacheBoard(ugly_and_naive_hashing1, threatZone, board);
+    const pathSafe = !attacked[1 + 0 * 8] && !attacked[2 + 0 * 8] && !attacked[3 + 0 * 8]
 
     return pathSafe ? add(pos, move) : null
   }
@@ -236,7 +215,7 @@ interface Pos {
 }
 
 export enum PieceType {
-  Pawn, Knigth, Rook, Bishop, Queen, King
+  Pawn = 1, Knigth, Rook, Bishop, Queen, King
 }
 
 export interface Piece {
@@ -365,7 +344,7 @@ export const moves: { [k: string]: ((pos: Pos, board: Board) => Pos[]) } = {
   k: buildValidator(PieceType.King, kingMovesWithKingSafe),
 }
 
-export const threats: { [k: string]: ((pos: Pos, board: Board) => Pos[]) } = {
+const threats: { [k: string]: ((pos: Pos, board: Board) => Pos[]) } = {
   p: buildValidator(PieceType.Pawn, pawnMoves),
   n: buildValidator(PieceType.Knigth, knigthMoves),
   r: buildValidator(PieceType.Rook, rookMoves),
@@ -378,7 +357,18 @@ export function swap({ x, y }: { x: number, y: number }, swap: boolean) {
   return ({ x, y: swap ? y : 7 - y })
 }
 
-const threatsByType = [
+export const movesByType = [
+  () => [], //noop
+  moves.p,
+  moves.n,
+  moves.r,
+  moves.b,
+  moves.q,
+  moves.k,
+]
+
+export const threatsByType = [
+  () => [], //noop
   threats.p,
   threats.n,
   threats.r,
@@ -386,6 +376,17 @@ const threatsByType = [
   threats.q,
   threats.k,
 ]
+// .map(f => function applyOrderPieces(p: Pos, b: Board) { return orderPieces(f(p, b)) })
+// .map(f => function applyCache(p: Pos, b: Board) { return cachePosAndBoard(ugly_and_naive_hashing2, f, p, b) })
+
+export function orderPieces<T extends Pos>(pieces: T[]): T[] {
+  const emptyBoard = Array(8 * 8);
+  pieces.forEach(function setBoardIfPresent(p) {
+    if (p) emptyBoard[p.x + p.y * 8] = p
+  })
+  return emptyBoard
+}
+
 
 export const pieceTypeByName = (str: string) => {
   switch (str.toLowerCase()) {
@@ -398,4 +399,68 @@ export const pieceTypeByName = (str: string) => {
     default: null
   }
 }
+
+// --- cache stuff
+
+// const stats = {
+//   hit: 0, miss: 0
+// }
+// const cacheBoardMemory = {}
+// function cacheBoard(hash: (b: Board) => string, f: (b: Board) => boolean[], board: Board): boolean[] {
+//   const id = hash(board)
+//   if (cacheBoardMemory[id]) {
+//     stats.hit++
+//     // console.debug(stats.hit, stats.miss)
+//     return cacheBoardMemory[id]
+//   }
+//   const result = f(board);
+//   cacheBoardMemory[id] = result
+//   stats.miss++
+//   // console.debug(stats.hit, stats.miss)
+//   return result
+// }
+
+// function ugly_and_naive_hashing1(board: Board) {
+//   const b = `${board?.passant}${board?.castle?.didMoveKing}${board?.castle?.didMoveLongTower}${board?.castle?.didMoveShortTower}|`
+//   const ps = board.pieces.map(p => !p ? '.' : `${p.x}${p.y}${p.type}${p.foe}`)
+//   return b + ps
+// }
+
+// function ugly_and_naive_hashing2(pos: Pos, board: Board) {
+//   const b = `${pos.x}${pos.y}|${board?.passant}${board?.castle?.didMoveKing}${board?.castle?.didMoveLongTower}${board?.castle?.didMoveShortTower}|`
+//   const ps = board.pieces.map(p => !p ? '.' : `${p.x}${p.y}${p.type}${p.foe}`)
+//   return b + ps
+// }
+
+// // const stats = {
+// //   hit: 0, miss: 0
+// // }
+
+// const cachePosAndBoardMemory = {}
+// function cachePosAndBoard(hash: (p: Pos, b: Board) => string, f: (p: Pos, b: Board) => Pos[], pos: Pos, board: Board): Pos[] {
+//   const id = hash(pos, board)
+//   if (cachePosAndBoardMemory[id]) {
+//     // stats.hit++
+//     // console.debug(Object.keys(cacheMemory).length, stats.hit, stats.miss)
+//     return cachePosAndBoardMemory[id]
+//   }
+//   const result = f(pos, board);
+//   cachePosAndBoardMemory[id] = result
+//   // stats.miss++
+//   // console.debug(Object.keys(cacheMemory).length, stats.hit, stats.miss)
+//   return result
+// }
+
+// function printState(pieces) {
+//   let result = ''
+//   for(let j = 0; j < 64; j++) {
+//     const x = j%8
+//     const y = Math.floor(j/8)
+//     const i = x + (7-y) * 8
+//     const c = pieces[i]
+//     result += (c?c.type:' ')+((i+1)%8?'':` ${Math.floor(i/8)+1}\n`)
+//   }
+//   result += '\nabcdefgh'
+//   console.log(result)
+// }
 
