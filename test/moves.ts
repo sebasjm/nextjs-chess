@@ -642,7 +642,7 @@ describe('regression test', function() {
     }
     const ms = move({x:6,y:6},board)
 
-    expect(ms.map(justPosition)).to.have.deep.members([{x:6,y:7}])
+    expect(ms.map(justPosition)).to.have.deep.members([{x:6,y:5}])
   });
 
   it('should not check through king', function() {
@@ -651,7 +651,7 @@ describe('regression test', function() {
     }
     const ms = move({x:3,y:4},board)
 
-    expect(ms.map(justPosition)).to.have.deep.members([{x:3,y:5}])
+    expect(ms.map(justPosition)).to.have.deep.members([{x:3,y:3}])
   });
 
   it('should be able to block a pawn', function() {

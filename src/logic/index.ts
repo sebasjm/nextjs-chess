@@ -70,11 +70,16 @@ function validIfEmpty(move: DeltaPos) {
     return !piece ? dest : null
   }
 }
-function validIfEmptyAndRank1(move: DeltaPos) {
-  return function applyValidIfEmptyAndRank1(orig: Piece, board: Board): IsMoveValid {
-    const dest = add(orig, move)
-    const piece = board.pieces[dest.x + dest.y * 8]
-    return !piece && orig.y === 1 ? dest : null
+
+function validIfBlackRank1(move: DeltaPos) {
+  return function applyBlackRank1(orig: Piece, board: Board): IsMoveValid {
+    return orig.y === 7 ? add(orig, move) : null
+  }
+}
+
+function validIfWhiteRank1(move: DeltaPos) {
+  return function applyWhiteRank1(orig: Piece, board: Board): IsMoveValid {
+    return orig.y === 1 ? add(orig, move) : null
   }
 }
 
@@ -88,19 +93,6 @@ function validIfPassant(move: DeltaPos) {
 
     return isEnemy ? dest : null
   }
-}
-
-function asEnemyPieces(pieces: Piece[]): Piece[] {
-  const emptyBoard = Array(8 * 8);
-  pieces.forEach(function setEnemyBoardIfPresent(p) {
-    if (p) emptyBoard[p.x + (7 - p.y) * 8] = {
-      x: p.x,
-      y: 7 - p.y,
-      type: p.type,
-      group: p.group
-    }
-  })
-  return emptyBoard
 }
 
 function printState(pieces:Piece[]) {
@@ -130,16 +122,11 @@ function printThreat(attacked:number[]) {
 }
 
 function threatZone(board: Board): number[] {
-  const enemyBoard: Board = {
-    pieces: asEnemyPieces(board.pieces),
-  }
-
   const result = Array<number>(8 * 8)
   result.fill(0)
-  enemyBoard.pieces.forEach(function updateDangerous(enemy) {
-    if (!enemy) return false; //if no enemy or group of the enemy
-    threatsByType[enemy.type](enemy, enemyBoard).forEach(function mark(attack) {
-      result[attack.x + (7 - attack.y) * 8] += first20Primes[enemy.group]
+  board.pieces.forEach(function updateDangerous(enemy) {
+    if (enemy) threatsByType[enemy.type](enemy, board).forEach(function mark(attack) {
+      result[attack.x + attack.y * 8] += first20Primes[enemy.group]
     })
   })
 
@@ -247,7 +234,7 @@ interface Pos {
 }
 
 export enum PieceType {
-  Pawn = 1, Knigth, Rook, Bishop, Queen, King
+  WhitePawn = 1, BlackPawn, Knigth, Rook, Bishop, Queen, King
 }
 
 const first20Primes = [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71]
@@ -296,17 +283,27 @@ function buildValidator(type: PieceType, moveValidators: D[]) {
   }
 }
 
-const pawnMoves = [
+const whitePawnMoves = [
   validIfEmpty(asDeltaPos([0, 1])),
   validOr(validIfPassant, validIfEnemy)(asDeltaPos([1, 1])),
   validOr(validIfPassant, validIfEnemy)(asDeltaPos([-1, 1])),
-  validAll(validIfEmpty(asDeltaPos([0, 1])), validIfEmptyAndRank1(asDeltaPos([0, 2]))),
+  validAll(validIfEmpty(asDeltaPos([0, 1])), validAnd(validIfEmpty(asDeltaPos([0, 2])),validIfWhiteRank1)),
 ]
   .map(x => validAnd(x, validIfNoFriend))
   .map(x => validAnd(x, validIfInside));
 
-const pawnMovesWithKingSafe = pawnMoves.map(x => validAnd(x, validIfKingSafe))
+const whitePawnMovesWithKingSafe = whitePawnMoves.map(x => validAnd(x, validIfKingSafe))
 
+const blackPawnMoves = [
+  validIfEmpty(asDeltaPos([0, -1])),
+  validOr(validIfPassant, validIfEnemy)(asDeltaPos([1, -1])),
+  validOr(validIfPassant, validIfEnemy)(asDeltaPos([-1, -1])),
+  validAll(validIfEmpty(asDeltaPos([0, -1])), validAnd(validIfEmpty(asDeltaPos([0, -2])),validIfBlackRank1)),
+]
+  .map(x => validAnd(x, validIfNoFriend))
+  .map(x => validAnd(x, validIfInside));
+
+const blackPawnMovesWithKingSafe = blackPawnMoves.map(x => validAnd(x, validIfKingSafe))
 
 const knigthMoves = ([
   [+1, +2],
@@ -370,7 +367,8 @@ const kingMovesWithKingSafe = kingMoves
   .map(x => validAnd(x, validIfKingSafe))
 
 export const moves: { [k: string]: ((orig: Piece, board: Board) => Pos[]) } = {
-  p: buildValidator(PieceType.Pawn, pawnMovesWithKingSafe),
+  wp: buildValidator(PieceType.WhitePawn, whitePawnMovesWithKingSafe),
+  bp: buildValidator(PieceType.BlackPawn, blackPawnMovesWithKingSafe),
   n: buildValidator(PieceType.Knigth, knigthMovesWithKingSafe),
   r: buildValidator(PieceType.Rook, rookMovesWithKingSafe),
   b: buildValidator(PieceType.Bishop, bishopMovesWithKingSafe),
@@ -386,7 +384,8 @@ export function move(p: Pos, board: Board): Pos[] {
 }
 
 const threats: { [k: string]: ((orig: Piece, board: Board) => Pos[]) } = {
-  p: buildValidator(PieceType.Pawn, pawnMoves),
+  wp: buildValidator(PieceType.WhitePawn, whitePawnMoves),
+  bp: buildValidator(PieceType.BlackPawn, blackPawnMoves),
   n: buildValidator(PieceType.Knigth, knigthMoves),
   r: buildValidator(PieceType.Rook, rookMoves),
   b: buildValidator(PieceType.Bishop, bishopMoves),
@@ -400,7 +399,8 @@ export function swap({ x, y }: { x: number, y: number }, swap: boolean) {
 
 export const movesByType = [
   () => [], //noop
-  moves.p,
+  moves.wp,
+  moves.bp,
   moves.n,
   moves.r,
   moves.b,
@@ -410,7 +410,8 @@ export const movesByType = [
 
 export const threatsByType = [
   () => [], //noop
-  threats.p,
+  threats.wp,
+  threats.bp,
   threats.n,
   threats.r,
   threats.b,
@@ -436,7 +437,7 @@ export const pieceTypeByName = (str: string) => {
     case 'n': return PieceType.Knigth;
     case 'r': return PieceType.Rook;
     case 'q': return PieceType.Queen;
-    case 'p': return PieceType.Pawn;
+    case 'p': return str !== str.toLowerCase() ? PieceType.WhitePawn : PieceType.BlackPawn;
     default: null
   }
 }

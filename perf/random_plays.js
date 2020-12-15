@@ -23,20 +23,7 @@ function translatePieces(ps) {
   })).filter(Boolean))
 }
 
-function invertBoard(__pieces) {
-  const emptyBoard = Array(8 * 8);
-  __pieces.forEach(function setEnemyBoardIfPresent(p) {
-    if (p) emptyBoard[p.x + (7 - p.y) * 8] = {
-      x: p.x,
-      y: 7 - p.y,
-      type: p.type,
-      group: p.group
-    }
-  })
-  return emptyBoard
-}
-
-var seed = 1;
+var seed = 2;
 function random() {
     var x = Math.sin(seed++) * 10000;
     return x - Math.floor(x);
@@ -56,17 +43,15 @@ function pepe(state) {
   // console.log("elegido", from)
   const from_idx = from.x + from.y * 8 
   
-  const board = state.turn === 2 ? {pieces:state.pieces} : {pieces: invertBoard(state.pieces)};
+  const board = {pieces:state.pieces};
   board.castle = state.castle[state.turn]
   board.passant = state.passant
   // printState(board.pieces)
-  const f = state.turn === 2 ? from : {...from,y:7-from.y}
 
-  const possible_moves = performance.timerify(move)(f,board)
+  const possible_moves = performance.timerify(move)(from,board)
   if (possible_moves.length) {
     const rnd_move = Math.floor(random() * possible_moves.length)
-    const pos = possible_moves[rnd_move]
-    const dest = state.turn === 2 ? pos : {...pos,y:7-pos.y}
+    const dest = possible_moves[rnd_move]
     // console.log("movimiento", dest)
     const dest_idx = dest.x + dest.y * 8 
   
@@ -75,22 +60,25 @@ function pepe(state) {
     state.pieces[dest_idx] = {...fi, x: dest.x, y:dest.y}
     state.pieces[from_idx] = null
 
-    if (from.type === 1 && pos.y === 3) {
-      state.passant = pos.x
+    const fromRank = from.type === 1 ? from.y : (from.type === 2 ? 7 - from.y : 0);
+    const toRank   = dest.type === 1 ? dest.y : (dest.type === 2 ? 7 - dest.y : 0);
+
+    if (fromRank === 1 && toRank === 3) {
+      state.passant = dest.x
     } else {
       state.passant = false
     }
-    const convert = from.type === 1 && pos.y === 7
+    const convert = toRank === 7
     if (convert) {
-      state.pieces[dest_idx].type = 5
+      state.pieces[dest_idx].type = 6
     }
-    if (from.type === 6) {
+    if (from.type === 7) {
       state.castle[state.turn].didMoveKing = true
     }
-    if (from.type === 3 && from.x === 7) {
+    if (from.type === 4 && from.x === 7) {
       state.castle[state.turn].didMoveShortTower = true
     }
-    if (from.type === 3 && from.x === 0) {
+    if (from.type === 4 && from.x === 0) {
       state.castle[state.turn].didMoveLongTower = true
     }
 
@@ -99,7 +87,7 @@ function pepe(state) {
       moveNumber++
       process.stdout.write(moveNumber+'.')
     }
-    process.stdout.write(`${' PNRBQK'[from.type]}${'abcdefgh'[from.x]}x${'abcdefgh'[dest.x]}${dest.y+1}${convert?'=Q':''} `)
+    process.stdout.write(`${' PPNRBQK'[from.type]}${'abcdefgh'[from.x]}${from.y+1}${'abcdefgh'[dest.x]}${dest.y+1}${convert?'=Q':''} `)
     state.turn = state.turn === 2 ? 3 : 2
   }
 }
@@ -117,20 +105,11 @@ function printState(pieces) {
   console.log(result)
 }
 
-const _pieces = translatePieces(lineUp)
-let _count = {
-  [2] : 16,
-  [3] : 16,
-}
-
 const state = {
-  count:_count, 
-  pieces:_pieces, 
+  count: { [2] : 16, [3] : 16, }, 
+  pieces: translatePieces(lineUp), 
   turn: 2,
-  castle: {
-    [2]: {},
-    [3]: {},
-  },
+  castle: { [2]: {}, [3]: {}, },
   passant: false
 }
 
