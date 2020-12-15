@@ -1,18 +1,21 @@
-'use strict';
 
-const { PerformanceObserver, performance } = require('perf_hooks');
-const Histogram = require('native-hdr-histogram')
+import { PerformanceObserver, performance } from 'perf_hooks';
+import * as Histogram from 'native-hdr-histogram';
+import { Board } from '../src/logic';
+import lineUp from '../src/defaultLineup'
+import {orderPieces, pieceTypeByName, move} from '../src/logic/index'
+
 const histogram = new Histogram(1, 1000*1000)
 
 const obs = new PerformanceObserver((items) => {
-  histogram.record(items.getEntries()[0].duration*1000)
-  // console.log(items.getEntries()[0].duration)
-  // console.log(Math.floor(items.getEntries()[0].duration*1000))
+  items.getEntries().forEach(e =>{
+    histogram.record(e.duration*1000)
+  })
+  console.log(items.getEntries()[0].duration)
+  console.log(items.getEntries().length)
 });
-obs.observe({ entryTypes: ['function'] }, true);
+obs.observe({ entryTypes: ['function'], buffered: true });
 
-const {orderPieces, pieceTypeByName, move} = require('../dist/src/logic/index')
-const lineUp = require('../dist/src/defaultLineup.jsx').default
 
 function translatePieces(ps) {
   return orderPieces(ps.map(name => ({
@@ -43,7 +46,7 @@ function pepe(state) {
   // console.log("elegido", from)
   const from_idx = from.x + from.y * 8 
   
-  const board = {pieces:state.pieces};
+  const board: Board = {pieces:state.pieces};
   board.castle = state.castle[state.turn]
   board.passant = state.passant
   // printState(board.pieces)
@@ -118,9 +121,14 @@ while(step--) {
   pepe(state)
 }
 console.log('')
+setTimeout(()=>{
+  console.log(histogram.mean())
+  console.log(histogram.min())
+  console.log(histogram.max())
+  console.log(histogram.stddev())
+  console.log(histogram.percentiles()) 
+},1000)
 
-console.log(histogram.mean())
-console.log(histogram.min())
-console.log(histogram.max())
-console.log(histogram.stddev())
-console.log(histogram.percentiles())
+export default {
+  d:""
+}

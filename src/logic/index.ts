@@ -276,7 +276,7 @@ function sevenWithClearPath(direction: (i: number) => Delta): D[] {
 }
 
 function buildValidator(type: PieceType, moveValidators: D[]) {
-  return function validator(orig: Piece, board: Board): Pos[] {
+  return function validator(orig: Piece, board: Board): Piece[] {
     function checkIfValid(v) { return v(orig, board) }
     
     return moveValidators.map(checkIfValid).filter(Boolean)
@@ -366,7 +366,7 @@ const kingMovesWithKingSafe = kingMoves
   .concat(validIfShortCastle(asDeltaPos([2, 0])))
   .map(x => validAnd(x, validIfKingSafe))
 
-export const moves: { [k: string]: ((orig: Piece, board: Board) => Pos[]) } = {
+export const moves: { [k: string]: ((orig: Piece, board: Board) => Piece[]) } = {
   wp: buildValidator(PieceType.WhitePawn, whitePawnMovesWithKingSafe),
   bp: buildValidator(PieceType.BlackPawn, blackPawnMovesWithKingSafe),
   n: buildValidator(PieceType.Knigth, knigthMovesWithKingSafe),
@@ -376,14 +376,14 @@ export const moves: { [k: string]: ((orig: Piece, board: Board) => Pos[]) } = {
   k: buildValidator(PieceType.King, kingMovesWithKingSafe),
 }
 
-export function move(p: Pos, board: Board): Pos[] {
+export function move(p: Pos, board: Board): Piece[] {
   const idx = p.x + p.y * 8
   const piece = board.pieces[idx]
   const algorithm = movesByType[piece.type]
   return algorithm(piece, board)
 }
 
-const threats: { [k: string]: ((orig: Piece, board: Board) => Pos[]) } = {
+const threats: { [k: string]: ((orig: Piece, board: Board) => Piece[]) } = {
   wp: buildValidator(PieceType.WhitePawn, whitePawnMoves),
   bp: buildValidator(PieceType.BlackPawn, blackPawnMoves),
   n: buildValidator(PieceType.Knigth, knigthMoves),
@@ -398,7 +398,7 @@ export function swap({ x, y }: { x: number, y: number }, swap: boolean) {
 }
 
 export const movesByType = [
-  () => [], //noop
+  ():Piece[] => [], //noop
   moves.wp,
   moves.bp,
   moves.n,
@@ -409,7 +409,7 @@ export const movesByType = [
 ]
 
 export const threatsByType = [
-  () => [], //noop
+  ():Piece[] => [], //noop
   threats.wp,
   threats.bp,
   threats.n,
