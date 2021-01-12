@@ -1,6 +1,6 @@
 
 import { PerformanceObserver, performance } from 'perf_hooks';
-import * as Histogram from 'native-hdr-histogram';
+import Histogram from 'native-hdr-histogram';
 import { Board } from '../src/logic';
 import lineUp from '../src/defaultLineup'
 import {orderPieces, pieceTypeByName, move} from '../src/logic/index'
@@ -11,8 +11,6 @@ const obs = new PerformanceObserver((items) => {
   items.getEntries().forEach(e =>{
     histogram.record(e.duration*1000)
   })
-  console.log(items.getEntries()[0].duration)
-  console.log(items.getEntries().length)
 });
 obs.observe({ entryTypes: ['function'], buffered: true });
 
@@ -34,7 +32,7 @@ function random() {
 
 let moveNumber = 0
 
-function pepe(state) {
+function makeRandomMove(state) {
   const rnd = Math.floor(random() * state.count[state.turn])
   let i = rnd
   const from = state.pieces.find(l => {
@@ -118,17 +116,14 @@ const state = {
 
 let step = 500;
 while(step--) {
-  pepe(state)
+  makeRandomMove(state)
 }
 console.log('')
 setTimeout(()=>{
-  console.log(histogram.mean())
-  console.log(histogram.min())
-  console.log(histogram.max())
-  console.log(histogram.stddev())
+  console.log('mean:',histogram.mean())
+  console.log('min:',histogram.min())
+  console.log('max:',histogram.max())
+  console.log('std:',histogram.stddev())
   console.log(histogram.percentiles()) 
 },1000)
 
-export default {
-  d:""
-}

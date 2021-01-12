@@ -95,44 +95,55 @@ function validIfPassant(move: DeltaPos) {
   }
 }
 
-function printState(pieces:Piece[]) {
+function printState(pieces: Piece[]) {
   let result = ''
-  for(let j = 0; j < 64; j++) {
-    const x = j%8
-    const y = Math.floor(j/8)
-    const i = x + (7-y) * 8
+  for (let j = 0; j < 64; j++) {
+    const x = j % 8
+    const y = Math.floor(j / 8)
+    const i = x + (7 - y) * 8
     const c = pieces[i]
-    result += (c?c.type:' ')+((i+1)%8?'':` ${Math.floor(i/8)+1}\n`)
+    result += (c ? c.type : ' ') + ((i + 1) % 8 ? '' : ` ${Math.floor(i / 8) + 1}\n`)
   }
   result += '\nabcdefgh'
   console.log(result)
 }
 
-function printThreat(attacked:number[]) {
+function printThreat(attacked: number[]) {
   let result = ''
-  for(let j = 0; j < 64; j++) {
-    const x = j%8
-    const y = Math.floor(j/8)
-    const i = x + (7-y) * 8
+  for (let j = 0; j < 64; j++) {
+    const x = j % 8
+    const y = Math.floor(j / 8)
+    const i = x + (7 - y) * 8
     const c = attacked[i]
-    result += (c?c:' ')+((i+1)%8?'':` ${Math.floor(i/8)+1}\n`)
+    result += (c ? c : ' ') + ((i + 1) % 8 ? '' : ` ${Math.floor(i / 8) + 1}\n`)
   }
   result += '\nabcdefgh'
   console.log(result)
 }
 
 function threatZone(board: Board): number[] {
-  const result = Array<number>(8 * 8)
-  result.fill(0)
+  const result = zeroArray()
   board.pieces.forEach(function updateDangerous(enemy) {
-    if (enemy) threatsByType[enemy.type](enemy, board).forEach(function mark(attack) {
-      result[attack.x + attack.y * 8] += first20Primes[enemy.group]
-    })
+    if (enemy) {
+      const algorithm = threatsByType[enemy.type];
+      const zone = algorithm(enemy, board)
+      zone.forEach(function mark(attack) {
+        const gid = first20Primes[enemy.group]
+        const idx = attack.x + attack.y * 8
+        result[idx] += gid
+      })
+    }
   })
 
   // printState(board.pieces)
   // printThreat(result)
   return result
+}
+
+function zeroArray() {
+  const r = Array<number>(8 * 8);
+  r.fill(0)
+  return r
 }
 
 function validIfKingSafe(move: DeltaPos) {
@@ -142,13 +153,12 @@ function validIfKingSafe(move: DeltaPos) {
     if (!king) return dest // we are safe if there is no king in the board
 
     const nextBoard = {
-      pieces: Array.from(board.pieces)
+      pieces: Array.from(board.pieces),
     }
     nextBoard.pieces[orig.x + orig.y * 8] = null
     nextBoard.pieces[dest.x + dest.y * 8] = dest
 
     const attacked = threatZone(nextBoard);
-    // const attacked = cacheBoard(ugly_and_naive_hashing1, threatZone, nextBoard);
     const safe = (attacked[king.x + king.y * 8] % first20Primes[king.group]) == 0
 
     return safe ? dest : null
@@ -172,8 +182,8 @@ function validIfShortCastle(move: DeltaPos) {
     // path is safe?
     const attacked = threatZone(board);
     // const attacked = cacheBoard(ugly_and_naive_hashing1, threatZone, board);
-    const pathSafe = (attacked[5 + 0 * 8] % first20Primes[king.group]) == 0 
-      && (attacked[6 + 0 * 8]% first20Primes[king.group]) == 0
+    const pathSafe = (attacked[5 + 0 * 8] % first20Primes[king.group]) == 0
+      && (attacked[6 + 0 * 8] % first20Primes[king.group]) == 0
 
     return pathSafe ? add(orig, move) : null
   }
@@ -194,8 +204,8 @@ function validIfLongCastle(move: DeltaPos) {
 
     const attacked = threatZone(board);
     // const attacked = cacheBoard(ugly_and_naive_hashing1, threatZone, board);
-    const pathSafe = (attacked[1 + 0 * 8] % first20Primes[king.group]) == 0 
-      && (attacked[2 + 0 * 8] % first20Primes[king.group]) == 0 
+    const pathSafe = (attacked[1 + 0 * 8] % first20Primes[king.group]) == 0
+      && (attacked[2 + 0 * 8] % first20Primes[king.group]) == 0
       && (attacked[3 + 0 * 8] % first20Primes[king.group]) == 0
 
     return pathSafe ? add(orig, move) : null
@@ -237,7 +247,7 @@ export enum PieceType {
   WhitePawn = 1, BlackPawn, Knigth, Rook, Bishop, Queen, King
 }
 
-const first20Primes = [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71]
+const first20Primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71]
 
 export interface Piece {
   x: number,
@@ -278,7 +288,7 @@ function sevenWithClearPath(direction: (i: number) => Delta): D[] {
 function buildValidator(type: PieceType, moveValidators: D[]) {
   return function validator(orig: Piece, board: Board): Piece[] {
     function checkIfValid(v) { return v(orig, board) }
-    
+
     return moveValidators.map(checkIfValid).filter(Boolean)
   }
 }
@@ -287,7 +297,7 @@ const whitePawnMoves = [
   validIfEmpty(asDeltaPos([0, 1])),
   validOr(validIfPassant, validIfEnemy)(asDeltaPos([1, 1])),
   validOr(validIfPassant, validIfEnemy)(asDeltaPos([-1, 1])),
-  validAll(validIfEmpty(asDeltaPos([0, 1])), validAnd(validIfEmpty(asDeltaPos([0, 2])),validIfWhiteRank1)),
+  validAll(validIfEmpty(asDeltaPos([0, 1])), validAnd(validIfEmpty(asDeltaPos([0, 2])), validIfWhiteRank1)),
 ]
   .map(x => validAnd(x, validIfNoFriend))
   .map(x => validAnd(x, validIfInside));
@@ -298,7 +308,7 @@ const blackPawnMoves = [
   validIfEmpty(asDeltaPos([0, -1])),
   validOr(validIfPassant, validIfEnemy)(asDeltaPos([1, -1])),
   validOr(validIfPassant, validIfEnemy)(asDeltaPos([-1, -1])),
-  validAll(validIfEmpty(asDeltaPos([0, -1])), validAnd(validIfEmpty(asDeltaPos([0, -2])),validIfBlackRank1)),
+  validAll(validIfEmpty(asDeltaPos([0, -1])), validAnd(validIfEmpty(asDeltaPos([0, -2])), validIfBlackRank1)),
 ]
   .map(x => validAnd(x, validIfNoFriend))
   .map(x => validAnd(x, validIfInside));
@@ -398,7 +408,7 @@ export function swap({ x, y }: { x: number, y: number }, swap: boolean) {
 }
 
 export const movesByType = [
-  ():Piece[] => [], //noop
+  (): Piece[] => [], //noop
   moves.wp,
   moves.bp,
   moves.n,
@@ -409,7 +419,7 @@ export const movesByType = [
 ]
 
 export const threatsByType = [
-  ():Piece[] => [], //noop
+  (): Piece[] => [], //noop
   threats.wp,
   threats.bp,
   threats.n,
@@ -418,8 +428,6 @@ export const threatsByType = [
   threats.q,
   threats.k,
 ]
-// .map(f => function applyOrderPieces(p: Pos, b: Board) { return orderPieces(f(p, b)) })
-// .map(f => function applyCache(p: Pos, b: Board) { return cachePosAndBoard(ugly_and_naive_hashing2, f, p, b) })
 
 export function orderPieces<T extends Pos>(pieces: T[]): T[] {
   const emptyBoard = Array(8 * 8);
@@ -441,57 +449,6 @@ export const pieceTypeByName = (str: string) => {
     default: null
   }
 }
-
-// --- cache stuff
-
-// const stats = {
-//   hit: 0, miss: 0
-// }
-// const cacheBoardMemory = {}
-// function cacheBoard(hash: (b: Board) => string, f: (b: Board) => boolean[], board: Board): boolean[] {
-//   const id = hash(board)
-//   if (cacheBoardMemory[id]) {
-//     stats.hit++
-//     // console.debug(stats.hit, stats.miss)
-//     return cacheBoardMemory[id]
-//   }
-//   const result = f(board);
-//   cacheBoardMemory[id] = result
-//   stats.miss++
-//   // console.debug(stats.hit, stats.miss)
-//   return result
-// }
-
-// function ugly_and_naive_hashing1(board: Board) {
-//   const b = `${board?.passant}${board?.castle?.didMoveKing}${board?.castle?.didMoveLongTower}${board?.castle?.didMoveShortTower}|`
-//   const ps = board.pieces.map(p => !p ? '.' : `${p.x}${p.y}${p.type}${p.group}`)
-//   return b + ps
-// }
-
-// function ugly_and_naive_hashing2(pos: Pos, board: Board) {
-//   const b = `${pos.x}${pos.y}|${board?.passant}${board?.castle?.didMoveKing}${board?.castle?.didMoveLongTower}${board?.castle?.didMoveShortTower}|`
-//   const ps = board.pieces.map(p => !p ? '.' : `${p.x}${p.y}${p.type}${p.group}`)
-//   return b + ps
-// }
-
-// // const stats = {
-// //   hit: 0, miss: 0
-// // }
-
-// const cachePosAndBoardMemory = {}
-// function cachePosAndBoard(hash: (p: Pos, b: Board) => string, f: (p: Pos, b: Board) => Pos[], pos: Pos, board: Board): Pos[] {
-//   const id = hash(pos, board)
-//   if (cachePosAndBoardMemory[id]) {
-//     // stats.hit++
-//     // console.debug(Object.keys(cacheMemory).length, stats.hit, stats.miss)
-//     return cachePosAndBoardMemory[id]
-//   }
-//   const result = f(pos, board);
-//   cachePosAndBoardMemory[id] = result
-//   // stats.miss++
-//   // console.debug(Object.keys(cacheMemory).length, stats.hit, stats.miss)
-//   return result
-// }
 
 // function printState(pieces) {
 //   let result = ''
