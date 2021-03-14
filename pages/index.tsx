@@ -3,119 +3,146 @@ import React, { useEffect, useReducer, useState } from 'react';
 import Chess, { Dragging, getDefaultLineup } from '../src/react-chess'
 // import * as Ably from 'ably'
 // import axios from 'axios';
-import { orderPieces, Board, move, Piece, pieceTypeByName, swap } from '../src/logic';
+import { translatePieces, Board, move, Piece, Pos } from '../src/logic';
+import { stat } from 'fs';
 
-interface Props { }
 interface State {
-  pieces: string[];
+  pieces: Piece[];
   whiteTurn: boolean;
-  passant?: number;
-
+  // passant: number | undefined;
+  atHand: Piece | undefined;
+  validMoves: { x: number, y: number }[];
+  // whiteCastle: {[s:number]: {}};
 }
 interface MovePiece {
   type: 'move';
   data: {
-    piece: {
-      name: string, index: number;
-    };
-    from: string;
-    to: string;
+    eating: Piece;
+    to: Pos;
   };
 }
 
-type Action = MovePiece;
-
-const handler = { client: null }
-
-function translatePieces(ps:string[], whiteTurn: boolean): Piece[] { return orderPieces(ps.map( name => ({
-  x: name.codePointAt(2) - 'a'.codePointAt(0),
-  y: (y => whiteTurn ? y : 7-y)(name.codePointAt(3) - '1'.codePointAt(0)),
-  group: (whiteTurn === (name.charAt(0) === name.charAt(0).toLocaleLowerCase())?2:3), 
-  type: pieceTypeByName(name.charAt(0))
-})).filter(Boolean))
+interface PickPiece {
+  type: 'pick';
+  data: {
+    taking: Piece;
+    from: Pos;
+  };
 }
 
-function toXY(s:string) {
+type Action = PickPiece | MovePiece;
+
+function toXY(s: string) {
   return {
     x: s.codePointAt(0) - 'a'.codePointAt(0),
     y: s.codePointAt(1) - '1'.codePointAt(0)
   }
 }
-function fromXY({x,y}:{x:number, y:number}) {
+function fromXY({ x, y }: { x: number, y: number }) {
   return String.fromCodePoint('a'.codePointAt(0) + x) + String.fromCharCode('1'.codePointAt(0) + y)
 }
 
 
-function updateState(state: State, action: Action):State {
+function updateState(state: State, action: Action): State {
+  const board: Board = {
+    pieces: state.pieces,
+    // passant: state.passant,
+    // castle: {
+    //   didMoveKing: false,
+    //   didMoveLongTower: false,
+    //   didMoveShortTower: false,
+    // }
+  }
+
   switch (action.type) {
-    case 'move':
-      const {piece, from, to} = action.data
+    case 'pick': {
+      const { taking, from } = action.data
+      console.log('picking', from, taking)
 
-      const board:Board = {
-        pieces: translatePieces(state.pieces, state.whiteTurn),
-        passant: state.passant
+      const validMoves = move(from, board)
+
+      console.log("pick", from, validMoves.map(m => fromXY(m)))
+      console.log("board", board.pieces[from.x + from.y*8])
+      return {
+        ...state,
+        atHand: taking,
+        validMoves: validMoves,
       }
+    }
 
-      const orig = swap(toXY(from), state.whiteTurn) 
-      const dest = swap(toXY(to), state.whiteTurn) 
-      const validMoves = move(orig,board)
-        .map(x => fromXY(swap(x,state.whiteTurn))) //translate back position
+    case 'move': {
+      const { eating, to } = action.data
+      console.log('moving', to, eating)
 
-      if (!validMoves.find( m => m === to)) {
+      const validMoves = move(state.atHand, board)
+
+      console.log("move", to, validMoves.map(m => m))
+
+      if (!validMoves.find(m => m.x === to.x && m.y === to.y)) {
         console.log('invalid move')
         return state
       }
 
-      const newPieces = state.pieces
-        .map((curr, index) => {
-          if (piece.index === index) {
-            return `${piece.name}@${to}`
-          } else if (curr.indexOf(to) === 2) {
-            return null // To be removed from the board
-          }
-          return curr
-        })
-        .filter(Boolean)
-      
-      return { 
-        pieces: newPieces, 
-        whiteTurn: !state.whiteTurn, 
-        passant: piece.name.toLowerCase() === 'p' && orig.y === 1 && dest.y === 3 ? orig.x : null
+      const newPieces = [...state.pieces]
+      newPieces[state.atHand.x + state.atHand.y*8] = null
+      newPieces[to.x + to.y*8] = {
+        ...state.atHand, x: to.x, y: to.y
+      }
+      console.log(newPieces)
+
+      return {
+        pieces: newPieces,
+        whiteTurn: !state.whiteTurn,
+        // passant: state.atHand.name.toLowerCase() === 'p' && orig.y === 1 && dest.y === 3 ? orig.x : null,
+        atHand: undefined,
+        validMoves: [],
       };
+    }
     default:
       throw new Error();
   }
 }
 
-function resetState():State { return ({
-  pieces: getDefaultLineup(),
-  whiteTurn: true
-})
+function resetState(): State {
+  return ({
+    pieces: translatePieces(getDefaultLineup()),
+    whiteTurn: true,
+    atHand: undefined,
+    // passant: undefined,
+    validMoves: []
+  })
 }
 
-const isWhite = (string) => /^[A-Z]*$/.test(string.charAt(0))
-
-const handleDrag = (state:State) => (d: Dragging): boolean => {
-  if (!state.whiteTurn && isWhite(d.notation)) return false
-  if (state.whiteTurn && !isWhite(d.notation)) return false
-  return true;
-}
+const isWhite = (group: number) => group === 2
 
 function Demo() {
   const [state, dispatch] = useReducer(updateState, undefined, resetState)
-
-  const handleMovePiece = (piece, from, to) => {
-    dispatch({type: "move", data: {piece, from, to}})
-  }
 
   return (
     <div className="demo" style={{ width: 600 }}>
       <div>juegan {state.whiteTurn ? 'blancas' : 'negras'}</div>
 
-      <Chess  
-        whiteTurn={state.whiteTurn} pieces={state.pieces} passant={state.passant}
-        onDragStart={handleDrag(state)} 
-        onMovePiece={handleMovePiece} />
+      <Chess
+        pieces={state.pieces.filter(Boolean).map(p => `${p.name}@${fromXY(p)}`)}
+        marks={state.validMoves}
+        onClick={(pos) => {
+          const piece = state.pieces[pos.x + (8 * pos.y)]
+          console.log('click', pos, piece)
+
+          if (piece && state.whiteTurn === isWhite(piece.group)) {
+            dispatch({ type: "pick", data: { from: pos, taking: piece, } })
+            return true;
+          }
+
+          if (state.atHand) {
+            const m = state.validMoves.find(m => m.x === pos.x && m.y === pos.y)
+            if (!m) return false
+            dispatch({ type: "move", data: { to: pos, eating: piece } })
+          }
+
+          return true
+        }}
+      />
     </div>
   )
 }

@@ -1,15 +1,3 @@
-
-export function findPieceAtPosition({ pieces, pos }) {
-  for (let i = 0; i < pieces.length; i++) {
-    const piece = pieces[i]
-    if (piece.indexOf(pos) === 2) {
-      return { notation: piece, name: piece.slice(0, 1), index: i, position: pos }
-    }
-  }
-
-  return null
-}
-
 type F = (move: DeltaPos) => (orig: Piece, board: Board) => IsMoveValid
 
 type D = (orig: Piece, board: Board) => IsMoveValid
@@ -73,7 +61,7 @@ function validIfEmpty(move: DeltaPos) {
 
 function validIfBlackRank1(move: DeltaPos) {
   return function applyBlackRank1(orig: Piece, board: Board): IsMoveValid {
-    return orig.y === 7 ? add(orig, move) : null
+    return orig.y === 6 ? add(orig, move) : null
   }
 }
 
@@ -229,8 +217,8 @@ function validIfNoFriend(move: DeltaPos) {
   }
 }
 
-function add(p: Piece, move: DeltaPos) {
-  return ({ x: p.x + move.x, y: p.y + move.y, type: p.type, group: p.group })
+function add(p: Piece, move: DeltaPos): Piece {
+  return ({ ...p, x: p.x + move.x, y: p.y + move.y })
 }
 
 type IsMoveValid = Pos | null
@@ -238,7 +226,7 @@ type Delta = [x: number, y: number]
 type DeltaPos = Pos
 const asDeltaPos = (d: Delta): DeltaPos => ({ x: d[0], y: d[1] })
 
-interface Pos {
+export interface Pos {
   x: number,
   y: number,
 }
@@ -247,13 +235,31 @@ export enum PieceType {
   WhitePawn = 1, BlackPawn, Knigth, Rook, Bishop, Queen, King
 }
 
+export enum PieceName {
+  WhitePawn      = 'P', 
+  WhiteKnigth    = 'N', 
+  WhiteRook      = 'R', 
+  WhiteBishop    = 'B', 
+  WhiteQueen     = 'Q', 
+  WhiteKing      = 'K',
+
+  BlackPawn      = 'p', 
+  BlackKnigth    = 'n', 
+  BlackRook      = 'r', 
+  BlackBishop    = 'b', 
+  BlackQueen     = 'q', 
+  BlackKing      = 'k',
+}
+
 const first20Primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71]
 
+// piece should not have a position
 export interface Piece {
   x: number,
   y: number,
   group: number,
-  type: PieceType
+  type: PieceType,
+  name: PieceName,
 }
 export interface Board {
   pieces: Piece[];// pieces on board
@@ -403,10 +409,6 @@ const threats: { [k: string]: ((orig: Piece, board: Board) => Piece[]) } = {
   k: buildValidator(PieceType.King, kingMoves),
 }
 
-export function swap({ x, y }: { x: number, y: number }, swap: boolean) {
-  return ({ x, y: swap ? y : 7 - y })
-}
-
 export const movesByType = [
   (): Piece[] => [], //noop
   moves.wp,
@@ -429,8 +431,23 @@ export const threatsByType = [
   threats.k,
 ]
 
-export function orderPieces<T extends Pos>(pieces: T[]): T[] {
+function createPiece(name: string) {
+  return {
+    x: name.codePointAt(2) - 'a'.codePointAt(0),
+    y: name.codePointAt(3) - '1'.codePointAt(0),
+    group: (name.charAt(0) !== name.charAt(0).toLocaleLowerCase()) ? 2 : 3,
+    type: pieceTypeByName(name.charAt(0)),
+    name: pieceNameByName(name.charAt(0)),
+  }
+}
+
+export function translatePieces(ps: string[]): Piece[] {
+  return orderPieces(ps.map(createPiece))
+}
+
+function orderPieces<T extends Pos>(pieces: T[]): T[] {
   const emptyBoard = Array(8 * 8);
+  emptyBoard.fill(null)
   pieces.forEach(function setBoardIfPresent(p) {
     if (p) emptyBoard[p.x + p.y * 8] = p
   })
@@ -438,7 +455,7 @@ export function orderPieces<T extends Pos>(pieces: T[]): T[] {
 }
 
 
-export const pieceTypeByName = (str: string) => {
+export const pieceTypeByName = (str: string): PieceType => {
   switch (str.toLowerCase()) {
     case 'b': return PieceType.Bishop;
     case 'k': return PieceType.King;
@@ -446,7 +463,27 @@ export const pieceTypeByName = (str: string) => {
     case 'r': return PieceType.Rook;
     case 'q': return PieceType.Queen;
     case 'p': return str !== str.toLowerCase() ? PieceType.WhitePawn : PieceType.BlackPawn;
-    default: null
+    default: throw Error('unkown piace type' + str)
+  }
+}
+
+export const pieceNameByName = (str: string): PieceName => {
+  switch (str) {
+    case 'p': return PieceName.BlackPawn;
+    case 'b': return PieceName.BlackBishop;
+    case 'k': return PieceName.BlackKing;
+    case 'n': return PieceName.BlackKnigth;
+    case 'r': return PieceName.BlackRook;
+    case 'q': return PieceName.BlackQueen;
+
+    case 'P': return PieceName.WhitePawn;
+    case 'B': return PieceName.WhiteBishop;
+    case 'K': return PieceName.WhiteKing;
+    case 'N': return PieceName.WhiteKnigth;
+    case 'R': return PieceName.WhiteRook;
+    case 'Q': return PieceName.WhiteQueen;
+
+    default: throw Error('unkown piace name' + str)
   }
 }
 

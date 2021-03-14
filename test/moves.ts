@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { move, Board, Piece, pieceTypeByName, PieceType } from '../src/logic';
+import { move, Board, Piece, pieceTypeByName, pieceNameByName } from '../src/logic';
 import 'mocha';
 
 //asume white are foe
@@ -7,7 +7,8 @@ const buildPiece = (name:string):Piece => ({
   x: name.codePointAt(2) - '0'.codePointAt(0),
   y: name.codePointAt(3) - '0'.codePointAt(0),
   group: (name.charAt(0) === name.charAt(0).toLocaleLowerCase()?2:3),
-  type: pieceTypeByName(name.charAt(0))
+  type: pieceTypeByName(name.charAt(0)),
+  name: pieceNameByName(name.charAt(0)),
 })
 
 const buildPieces = (piecesName: string[]):Piece[] => {
@@ -642,7 +643,7 @@ describe('regression test', function() {
     }
     const ms = move({x:6,y:6},board)
 
-    expect(ms.map(justPosition)).to.have.deep.members([{x:6,y:5}])
+    expect(ms.map(justPosition)).to.have.deep.members([{x:6,y:5},{x:6,y:4}])
   });
 
   it('should not check through king', function() {
