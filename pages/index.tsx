@@ -9,7 +9,7 @@ import { stat } from 'fs';
 interface State {
   pieces: Piece[];
   whiteTurn: boolean;
-  // passant: number | undefined;
+  passant: number | undefined;
   atHand: Piece | undefined;
   validMoves: { x: number, y: number }[];
   // whiteCastle: {[s:number]: {}};
@@ -46,7 +46,7 @@ function fromXY({ x, y }: { x: number, y: number }) {
 function updateState(state: State, action: Action): State {
   const board: Board = {
     pieces: state.pieces,
-    // passant: state.passant,
+    passant: state.passant,
     // castle: {
     //   didMoveKing: false,
     //   didMoveLongTower: false,
@@ -61,8 +61,8 @@ function updateState(state: State, action: Action): State {
 
       const validMoves = move(from, board)
 
-      console.log("pick", from, validMoves.map(m => fromXY(m)))
-      console.log("board", board.pieces[from.x + from.y*8])
+      // console.log("pick", from, validMoves.map(m => fromXY(m)))
+      // console.log("board", board.pieces[from.x + from.y*8])
       return {
         ...state,
         atHand: taking,
@@ -76,7 +76,7 @@ function updateState(state: State, action: Action): State {
 
       const validMoves = move(state.atHand, board)
 
-      console.log("move", to, validMoves.map(m => m))
+      // console.log("move", to, validMoves.map(m => m))
 
       if (!validMoves.find(m => m.x === to.x && m.y === to.y)) {
         console.log('invalid move')
@@ -88,12 +88,17 @@ function updateState(state: State, action: Action): State {
       newPieces[to.x + to.y*8] = {
         ...state.atHand, x: to.x, y: to.y
       }
-      console.log(newPieces)
+      // console.log(newPieces)
 
+      const fromRank = state.atHand.type === 1 ? state.atHand.y : (state.atHand.type === 2 ? 7 - state.atHand.y : 0);
+      const toRank = state.atHand.type === 1 ? to.y : (state.atHand.type === 2 ? 7 - to.y : 0);
+    
+      const passant = (fromRank === 1 && toRank === 3) ? to.x : undefined;
+      console.log(fromRank, toRank, passant)
       return {
         pieces: newPieces,
         whiteTurn: !state.whiteTurn,
-        // passant: state.atHand.name.toLowerCase() === 'p' && orig.y === 1 && dest.y === 3 ? orig.x : null,
+        passant,
         atHand: undefined,
         validMoves: [],
       };
@@ -108,7 +113,7 @@ function resetState(): State {
     pieces: translatePieces(getDefaultLineup()),
     whiteTurn: true,
     atHand: undefined,
-    // passant: undefined,
+    passant: undefined,
     validMoves: []
   })
 }
@@ -127,7 +132,7 @@ function Demo() {
         marks={state.validMoves}
         onClick={(pos) => {
           const piece = state.pieces[pos.x + (8 * pos.y)]
-          console.log('click', pos, piece)
+          // console.log('click', pos, piece)
 
           if (piece && state.whiteTurn === isWhite(piece.group)) {
             dispatch({ type: "pick", data: { from: pos, taking: piece, } })

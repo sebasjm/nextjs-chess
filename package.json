@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "perf": "npx ts-node -O '{\"module\":\"commonjs\"}' perf/random_plays",
+    "perf-play": "ts-node -O '{\"module\":\"commonjs\"}' perf/random_plays",
+    "perf-depth": "ts-node -O '{\"module\":\"commonjs\"}' perf/deep_check",
     "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register test/**/*.ts"
   },
   "devDependencies": {

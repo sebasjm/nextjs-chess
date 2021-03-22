@@ -76,7 +76,7 @@ function validIfPassant(move: DeltaPos) {
   return function applyValidIfPassant(orig: Piece, board: Board): IsMoveValid {
     const dest = add(orig, move)
     if (board.passant !== dest.x) return null
-    const piece = board.pieces[dest.x + (dest.y - 1) * 8]
+    const piece = board.pieces[dest.x + orig.y * 8]
     const isEnemy = piece && (piece.group !== orig.group)
 
     return isEnemy ? dest : null
@@ -142,6 +142,7 @@ function validIfKingSafe(move: DeltaPos) {
 
     const nextBoard = {
       pieces: Array.from(board.pieces),
+      castle: {}
     }
     nextBoard.pieces[orig.x + orig.y * 8] = null
     nextBoard.pieces[dest.x + dest.y * 8] = dest
@@ -155,7 +156,7 @@ function validIfKingSafe(move: DeltaPos) {
 function validIfShortCastle(move: DeltaPos) {
   return function applyValidIfShortCastle(orig: Piece, board: Board): IsMoveValid {
     // history ok?
-    if (board.castle?.didMoveKing || board.castle?.didMoveShortTower) return null
+    if (board.castle[orig.group].didMoveKing || board.castle[orig.group].didMoveShortTower) return null
 
     // pieces in place?
     const king = board.pieces[4 + 0 * 8]
@@ -179,7 +180,7 @@ function validIfShortCastle(move: DeltaPos) {
 
 function validIfLongCastle(move: DeltaPos) {
   return function applyValidIfLongCastle(orig: Piece, board: Board): IsMoveValid {
-    if (board.castle?.didMoveKing || board.castle?.didMoveLongTower) return null
+    if (board.castle[orig.group].didMoveKing || board.castle[orig.group].didMoveLongTower) return null
     const tower = board.pieces[0 + 0 * 8]
     const path1 = board.pieces[1 + 0 * 8]
     const path2 = board.pieces[2 + 0 * 8]
@@ -232,19 +233,19 @@ export interface Pos {
 }
 
 export enum PieceType {
-  WhitePawn = 1, BlackPawn, Knigth, Rook, Bishop, Queen, King
+  WhitePawn = 1, BlackPawn, Knight, Rook, Bishop, Queen, King
 }
 
 export enum PieceName {
   WhitePawn      = 'P', 
-  WhiteKnigth    = 'N', 
+  WhiteKnight    = 'N', 
   WhiteRook      = 'R', 
   WhiteBishop    = 'B', 
   WhiteQueen     = 'Q', 
   WhiteKing      = 'K',
 
   BlackPawn      = 'p', 
-  BlackKnigth    = 'n', 
+  BlackKnight    = 'n', 
   BlackRook      = 'r', 
   BlackBishop    = 'b', 
   BlackQueen     = 'q', 
@@ -264,10 +265,12 @@ export interface Piece {
 export interface Board {
   pieces: Piece[];// pieces on board
   passant?: number; //did group an en'passant on last move?
-  castle?: {
-    didMoveKing?: boolean; //is still posible to castle?
-    didMoveShortTower?: boolean; //is still posible to castle?
-    didMoveLongTower?: boolean; //is still posible to castle?
+  castle: {
+    [turn:number]: {
+      didMoveKing?: boolean; //is still posible to castle?
+      didMoveShortTower?: boolean; //is still posible to castle?
+      didMoveLongTower?: boolean; //is still posible to castle?
+    }
   };
 }
 
@@ -321,7 +324,7 @@ const blackPawnMoves = [
 
 const blackPawnMovesWithKingSafe = blackPawnMoves.map(x => validAnd(x, validIfKingSafe))
 
-const knigthMoves = ([
+const KnightMoves = ([
   [+1, +2],
   [+1, -2],
   [-1, +2],
@@ -335,7 +338,7 @@ const knigthMoves = ([
   .map(x => validIfNoFriend(x))
   .map(x => validAnd(x, validIfInside))
 
-const knigthMovesWithKingSafe = knigthMoves.map(x => validAnd(x, validIfKingSafe))
+const KnightMovesWithKingSafe = KnightMoves.map(x => validAnd(x, validIfKingSafe))
 
 const rookMoves = [
   ...sevenWithClearPath(i => [0, i + 1]),
@@ -385,7 +388,7 @@ const kingMovesWithKingSafe = kingMoves
 export const moves: { [k: string]: ((orig: Piece, board: Board) => Piece[]) } = {
   wp: buildValidator(PieceType.WhitePawn, whitePawnMovesWithKingSafe),
   bp: buildValidator(PieceType.BlackPawn, blackPawnMovesWithKingSafe),
-  n: buildValidator(PieceType.Knigth, knigthMovesWithKingSafe),
+  n: buildValidator(PieceType.Knight, KnightMovesWithKingSafe),
   r: buildValidator(PieceType.Rook, rookMovesWithKingSafe),
   b: buildValidator(PieceType.Bishop, bishopMovesWithKingSafe),
   q: buildValidator(PieceType.Queen, queenMovesWithKingSafe),
@@ -395,14 +398,56 @@ export const moves: { [k: string]: ((orig: Piece, board: Board) => Piece[]) } = 
 export function move(p: Pos, board: Board): Piece[] {
   const idx = p.x + p.y * 8
   const piece = board.pieces[idx]
+  if (!piece) return []
   const algorithm = movesByType[piece.type]
   return algorithm(piece, board)
+}
+
+
+export interface Action {
+  from: Piece;
+  dest: Piece;
+}
+
+export function makeMove(board: Board, action: Action): Board {
+  const { from, dest } = action
+  const from_idx = from.x + from.y * 8
+  const dest_idx = dest.x + dest.y * 8
+
+  const pieces: Piece[] = [...board.pieces]
+
+  const fi = board.pieces[from_idx]
+  pieces[dest_idx] = { ...fi, x: dest.x, y: dest.y }
+  pieces[from_idx] = null
+
+  const fromRank = from.type === 1 ? from.y : (from.type === 2 ? 7 - from.y : 0);
+  const toRank = from.type === 1 ? dest.y : (from.type === 2 ? 7 - dest.y : 0);
+
+  const passant = (fromRank === 1 && toRank === 3) ? dest.x : undefined;
+  const convert = toRank === 7
+
+  if (convert) {
+    pieces[dest_idx].type = 6
+  }
+  
+  const castle: any = { ...board.castle };
+  if (from.type === 7) {
+    castle[fi.group].didMoveKing = true
+  }
+  if (from.type === 4 && from.x === 7) {
+    castle[fi.group].didMoveShortTower = true
+  }
+  if (from.type === 4 && from.x === 0) {
+    castle[fi.group].didMoveLongTower = true
+  }
+
+  return { castle, passant, pieces }
 }
 
 const threats: { [k: string]: ((orig: Piece, board: Board) => Piece[]) } = {
   wp: buildValidator(PieceType.WhitePawn, whitePawnMoves),
   bp: buildValidator(PieceType.BlackPawn, blackPawnMoves),
-  n: buildValidator(PieceType.Knigth, knigthMoves),
+  n: buildValidator(PieceType.Knight, KnightMoves),
   r: buildValidator(PieceType.Rook, rookMoves),
   b: buildValidator(PieceType.Bishop, bishopMoves),
   q: buildValidator(PieceType.Queen, queenMoves),
@@ -441,6 +486,36 @@ function createPiece(name: string) {
   }
 }
 
+function explodeFen(id: string): string | Array<null> {
+  const v = parseInt(id)
+  if (!isNaN(v)) {
+    const emptyList = Array<null>(v);
+    emptyList.fill(null)
+    return emptyList
+  }
+  return id
+}
+
+function createFen(id: string | null, y: number, x: number): Piece {
+  if (!id) return null
+  return {
+    x,y,
+    group: (id !== id.toLocaleLowerCase()) ? 2 : 3,
+    type: pieceTypeByName(id),
+    name: pieceNameByName(id),
+  }
+}
+
+export function translateFen(fen: string): Piece[] {
+  const fields = fen.split(' ')
+  if (!fields && fields.length < 6) throw Error(`invalid fen: no enough fields "${fen}"`)
+  const [ pieces, turn, castling, passant, clock, moves ] = fields
+  return pieces.split('/').map((row, ir) => {
+    return row.split('').map(explodeFen).flat().map((p, ic) => createFen(p,ir,ic))
+  }).flat()
+  // return orderPieces([])
+}
+
 export function translatePieces(ps: string[]): Piece[] {
   return orderPieces(ps.map(createPiece))
 }
@@ -459,7 +534,7 @@ export const pieceTypeByName = (str: string): PieceType => {
   switch (str.toLowerCase()) {
     case 'b': return PieceType.Bishop;
     case 'k': return PieceType.King;
-    case 'n': return PieceType.Knigth;
+    case 'n': return PieceType.Knight;
     case 'r': return PieceType.Rook;
     case 'q': return PieceType.Queen;
     case 'p': return str !== str.toLowerCase() ? PieceType.WhitePawn : PieceType.BlackPawn;
@@ -472,14 +547,14 @@ export const pieceNameByName = (str: string): PieceName => {
     case 'p': return PieceName.BlackPawn;
     case 'b': return PieceName.BlackBishop;
     case 'k': return PieceName.BlackKing;
-    case 'n': return PieceName.BlackKnigth;
+    case 'n': return PieceName.BlackKnight;
     case 'r': return PieceName.BlackRook;
     case 'q': return PieceName.BlackQueen;
 
     case 'P': return PieceName.WhitePawn;
     case 'B': return PieceName.WhiteBishop;
     case 'K': return PieceName.WhiteKing;
-    case 'N': return PieceName.WhiteKnigth;
+    case 'N': return PieceName.WhiteKnight;
     case 'R': return PieceName.WhiteRook;
     case 'Q': return PieceName.WhiteQueen;
 
