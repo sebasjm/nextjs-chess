@@ -267,9 +267,9 @@ export interface Board {
   passant?: number; //did group an en'passant on last move?
   castle: {
     [turn:number]: {
-      didMoveKing?: boolean; //is still posible to castle?
-      didMoveShortTower?: boolean; //is still posible to castle?
-      didMoveLongTower?: boolean; //is still posible to castle?
+      didMoveKing?: boolean; //is still possible to castle?
+      didMoveShortTower?: boolean; //is still possible to castle?
+      didMoveLongTower?: boolean; //is still possible to castle?
     }
   };
 }
@@ -409,39 +409,88 @@ export interface Action {
   dest: Piece;
 }
 
-export function makeMove(board: Board, action: Action): Board {
+export enum MoveType {
+  NORMAL, CONVERT, PASSANT, KING_MOVE, RIGHT_ROOK, LEFT_ROOK, RIGHT_CASTLE, LEFT_CASTLE,
+}
+
+export function makeMove(board: Board, action: Action): Board & {moveType: MoveType} {
   const { from, dest } = action
   const from_idx = from.x + from.y * 8
   const dest_idx = dest.x + dest.y * 8
 
+  const castle: any = { ...board.castle };
   const pieces: Piece[] = [...board.pieces]
 
   const fi = board.pieces[from_idx]
-  pieces[dest_idx] = { ...fi, x: dest.x, y: dest.y }
-  pieces[from_idx] = null
 
-  const fromRank = from.type === 1 ? from.y : (from.type === 2 ? 7 - from.y : 0);
-  const toRank = from.type === 1 ? dest.y : (from.type === 2 ? 7 - dest.y : 0);
+  const fromRank = from.type === PieceType.WhitePawn ? 
+    from.y : 
+    (from.type === PieceType.BlackPawn ? 7 - from.y : 0);
+
+  const toRank = from.type === PieceType.WhitePawn ? 
+    dest.y : 
+    (from.type === PieceType.BlackPawn ? 7 - dest.y : 0);
 
   const passant = (fromRank === 1 && toRank === 3) ? dest.x : undefined;
   const convert = toRank === 7
 
+  // move pieces
+  pieces[dest_idx] = { ...fi, x: dest.x, y: dest.y }
+  pieces[from_idx] = null
+  let moveType = MoveType.NORMAL;
+  // last rank pawn convert to queen
   if (convert) {
-    pieces[dest_idx].type = 6
-  }
-  
-  const castle: any = { ...board.castle };
-  if (from.type === 7) {
-    castle[fi.group].didMoveKing = true
-  }
-  if (from.type === 4 && from.x === 7) {
-    castle[fi.group].didMoveShortTower = true
-  }
-  if (from.type === 4 && from.x === 0) {
-    castle[fi.group].didMoveLongTower = true
+    pieces[dest_idx].type = PieceType.Queen
+    pieces[dest_idx].name = pieces[dest_idx].name === PieceName.BlackPawn ?
+      PieceName.BlackQueen : 
+      PieceName.WhiteQueen;
+
+    moveType = MoveType.CONVERT;
   }
 
-  return { castle, passant, pieces }
+  // eat passant
+  if ((from.type === PieceType.WhitePawn || from.type === PieceType.BlackPawn) && board.passant === dest.x && board.passant !== from.x) {
+    pieces[dest.x + from.y * 8] = null
+    moveType = MoveType.PASSANT;
+  }
+  
+  // move the king cancel castle
+  if (from.type === PieceType.King) {
+    castle[fi.group].didMoveKing = true
+    moveType = MoveType.KING_MOVE;
+  }
+
+  // move right rook cancel short castle
+  if (from.type === PieceType.Rook && from.x === 7) {
+    castle[fi.group].didMoveShortTower = true
+    moveType = MoveType.RIGHT_ROOK;
+  }
+
+  // move left rook cancel long castle
+  if (from.type === PieceType.Rook && from.x === 0) {
+    castle[fi.group].didMoveLongTower = true
+    moveType = MoveType.LEFT_ROOK;
+  }
+
+  // short castle
+  if (from.type === PieceType.King && from.x === 4 && dest.x === 6) {
+    const tower = pieces[7 + from.y * 8]
+    pieces[7 + from.y * 8] = null
+    pieces[5 + from.y * 8] = tower
+    tower.x = 5
+    moveType = MoveType.RIGHT_CASTLE;
+  }
+
+  // long castle
+  if (from.type === PieceType.King && from.x === 4 && dest.x === 2) {
+    const tower = pieces[0 + from.y * 8]
+    pieces[0 + from.y * 8] = null
+    pieces[3 + from.y * 8] = tower
+    tower.x = 3
+    moveType = MoveType.LEFT_CASTLE;
+  }
+
+  return { castle, passant, pieces, moveType }
 }
 
 const threats: { [k: string]: ((orig: Piece, board: Board) => Piece[]) } = {
@@ -558,7 +607,7 @@ export const pieceNameByName = (str: string): PieceName => {
     case 'R': return PieceName.WhiteRook;
     case 'Q': return PieceName.WhiteQueen;
 
-    default: throw Error('unkown piace name' + str)
+    default: throw Error('unknown piece name' + str)
   }
 }
 

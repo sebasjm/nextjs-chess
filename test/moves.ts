@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { move, Board, Piece, pieceTypeByName, pieceNameByName } from '../src/logic';
+import { move, Board, Piece, pieceTypeByName, pieceNameByName, Action } from '../src/logic';
 import 'mocha';
 
 // assume white are foe

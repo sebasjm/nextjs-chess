@@ -3,7 +3,7 @@ import React, { useEffect, useReducer, useState } from 'react';
 import Chess, { Dragging, getDefaultLineup } from '../src/react-chess'
 // import * as Ably from 'ably'
 // import axios from 'axios';
-import { translatePieces, Board, move, Piece, Pos } from '../src/logic';
+import { translatePieces, Board, move, Piece, Pos, makeMove } from '../src/logic';
 import { stat } from 'fs';
 
 interface State {
@@ -12,7 +12,9 @@ interface State {
   passant: number | undefined;
   atHand: Piece | undefined;
   validMoves: { x: number, y: number }[];
-  // whiteCastle: {[s:number]: {}};
+  castle: {
+    [turn: number]: {}
+  }
 }
 interface MovePiece {
   type: 'move';
@@ -47,11 +49,7 @@ function updateState(state: State, action: Action): State {
   const board: Board = {
     pieces: state.pieces,
     passant: state.passant,
-    // castle: {
-    //   didMoveKing: false,
-    //   didMoveLongTower: false,
-    //   didMoveShortTower: false,
-    // }
+    castle: state.castle
   }
 
   switch (action.type) {
@@ -61,8 +59,6 @@ function updateState(state: State, action: Action): State {
 
       const validMoves = move(from, board)
 
-      // console.log("pick", from, validMoves.map(m => fromXY(m)))
-      // console.log("board", board.pieces[from.x + from.y*8])
       return {
         ...state,
         atHand: taking,
@@ -78,27 +74,19 @@ function updateState(state: State, action: Action): State {
 
       // console.log("move", to, validMoves.map(m => m))
 
-      if (!validMoves.find(m => m.x === to.x && m.y === to.y)) {
+      const validAction = validMoves.find(m => m.x === to.x && m.y === to.y)
+      if (!validAction) {
         console.log('invalid move')
         return state
       }
 
-      const newPieces = [...state.pieces]
-      newPieces[state.atHand.x + state.atHand.y*8] = null
-      newPieces[to.x + to.y*8] = {
-        ...state.atHand, x: to.x, y: to.y
-      }
-      // console.log(newPieces)
+      const newBoard = makeMove(board, { from: state.atHand, dest: validAction})
 
-      const fromRank = state.atHand.type === 1 ? state.atHand.y : (state.atHand.type === 2 ? 7 - state.atHand.y : 0);
-      const toRank = state.atHand.type === 1 ? to.y : (state.atHand.type === 2 ? 7 - to.y : 0);
-    
-      const passant = (fromRank === 1 && toRank === 3) ? to.x : undefined;
-      console.log(fromRank, toRank, passant)
       return {
-        pieces: newPieces,
+        pieces: newBoard.pieces,
         whiteTurn: !state.whiteTurn,
-        passant,
+        castle: newBoard.castle,
+        passant: newBoard.passant,
         atHand: undefined,
         validMoves: [],
       };
@@ -112,6 +100,7 @@ function resetState(): State {
   return ({
     pieces: translatePieces(getDefaultLineup()),
     whiteTurn: true,
+    castle: { [2]: {}, [3]: {}},
     atHand: undefined,
     passant: undefined,
     validMoves: []

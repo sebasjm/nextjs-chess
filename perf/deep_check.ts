@@ -11,29 +11,25 @@ const initialState: Board = {
   passant: undefined,
 }
 
-const d = [0, 0, 0]
-
-function moveGenerator(depth: number, state: Board, moved: Action[]) {
+function moveGenerator(depth: number, board: Board) {
   if (depth === 0) return 1
 
   const turn = depth % 2 ? 2 : 3;
 
-  const board: Board = { 
-    pieces: state.pieces,
-    castle: state.castle,
-    passant: state.passant,
-  };
-
-  const actions = state.pieces
+  const actions = board.pieces
     .filter(f => f && turn !== f.group)
     .flatMap(from => {
       return move(from, board).map(dest => ({ from, dest }))
     })
 
-  return actions.reduce((prev, curr) => prev + moveGenerator(depth - 1, makeMove(state, curr), [curr, ...moved]), 0)
+  return actions.reduce((prev, curr) => prev + moveGenerator(depth - 1, makeMove(board, curr)), 0)
 }
 
 console.time('moves')
-const moves = moveGenerator(3, initialState, [])
+const moves = moveGenerator(2, initialState)
 console.timeEnd('moves')
-console.log(moves, d)
+
+// iteration 1
+// depth 3 12464.527ms
+// depth 2 592.503ms
+
